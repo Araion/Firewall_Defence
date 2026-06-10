@@ -1,10 +1,10 @@
 # Firewall Defense - konfiguracja gry
 
 # Zycie rdzenia serwera
-serverHealth = 20
+serverHealth = 15
 
 # Glosnosc efektow dzwiekowych 0-100
 sfxVolume = 100
 
 # Glosnosc muzyki 0-100
-musicVolume = 50
+musicVolume = 0

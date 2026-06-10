@@ -33,7 +33,6 @@ sf::Vector2f Path::positionAt(float distance) const {
     if (distance <= 0.f) return m_points.front();
     if (distance >= m_totalLength) return m_points.back();
 
-    // Znajdujemy segment, w ktorym znajduje sie 'distance'.
     for (size_t i = 1; i < m_points.size(); ++i) {
         if (distance <= m_cumulative[i]) {
             float segStart = m_cumulative[i - 1];

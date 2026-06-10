@@ -3,10 +3,15 @@
 #include "states/MainMenuState.h"
 #include "entities/ServerCore.h"
 #include "entities/Enemy.h"
-#include "entities/VirusEnemy.h" // Zakladam, ze masz juz lub zrobisz prosta klase VirusEnemy
+#include "entities/VirusEnemy.h"
+#include "entities/TrojanEnemy.h"
+#include "entities/WormEnemy.h"
+#include "entities/ProxyEnemy.h"
+#include "entities/GlitchDroneEnemy.h"
+#include "entities/BossMalwareEnemy.h"
 #include "util/Theme.h"
 #include "util/MapFactory.h"
-#include <memory>
+#include "util/Rng.h"
 #include <algorithm>
 #include <iostream>
 #include <cmath>
@@ -15,14 +20,14 @@ PlayState::PlayState(Game& game) : GameState(game) {
     m_serverMaxHealth = m_game.getConfig().getInt("serverHealth", 20);
     m_serverHealth = m_serverMaxHealth;
 
-    // 1. Ładujemy mapę i jej ścieżki
+    // Ładujemy mapę i jej ścieżki
     m_levelMap = MapFactory::generate(1, 12345); // Poziom normalny, stałe seed do testów
 
     for (const auto& lane : m_levelMap.lanes) {
         m_paths.push_back(std::make_unique<Path>(lane));
     }
 
-    // 2. Tworzymy serwer na pozycji określonej przez mapę
+    // Tworzymy serwer na pozycji określonej przez mapę
     auto server = std::make_unique<ServerCore>(m_game.getResources(), m_levelMap.serverPos);
     server->setHealth(m_serverHealth, m_serverMaxHealth);
     m_server = server.get();
@@ -36,31 +41,44 @@ void PlayState::handleEvent(const sf::Event& e) {
     if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Escape) {
         m_game.changeState(std::make_unique<MainMenuState>(m_game));
     }
-
-    // Usunąłem manualne odbieranie HP kliknięciem, teraz zrobią to przeciwnicy
 }
 
 void PlayState::update(float dt) {
     m_time += dt;
-
-    // --- PROSTY SPAWNER WROGÓW NA POTRZEBY M2 ---
+    // prosta petla do sprawdzania przeciwnikow (tymczasowa)
     m_spawnTimer += dt;
-    if (m_spawnTimer >= 2.0f && !m_paths.empty()) {
+    if (m_spawnTimer >= m_nextSpawnDelay && !m_paths.empty()) {
         m_spawnTimer = 0.f;
-        // Spawnuje wroga na pierwszej ścieżce (index 0)
-        auto enemy = std::make_unique<VirusEnemy>(m_game.getResources(), m_paths[0].get());
+        m_nextSpawnDelay = Rng::rangef(0.5f, 2.0f);
+
+        int pathIdx = Rng::range(0, static_cast<int>(m_paths.size()) - 1);
+
+        int typeRoll = Rng::range(0, 5);
+        std::unique_ptr<Enemy> enemy;
+
+        if (typeRoll == 0) {
+            enemy = std::make_unique<VirusEnemy>(m_game.getResources(), m_paths[pathIdx].get());
+        } else if (typeRoll == 1) {
+            enemy = std::make_unique<TrojanEnemy>(m_game.getResources(), m_paths[pathIdx].get());
+        } else if (typeRoll == 2) {
+            enemy = std::make_unique<WormEnemy>(m_game.getResources(), m_paths[pathIdx].get());
+        } else if (typeRoll == 3) {
+            enemy = std::make_unique<ProxyEnemy>(m_game.getResources(), m_paths[pathIdx].get());
+        } else if (typeRoll == 4) {
+            enemy = std::make_unique<GlitchDroneEnemy>(m_game.getResources(), m_paths[pathIdx].get());
+        } else {
+            enemy = std::make_unique<BossMalwareEnemy>(m_game.getResources(), m_paths[pathIdx].get());}
+
         m_objects.push_back(std::move(enemy));
     }
-    // ---------------------------------------------
 
-    // Aktualizuje wszystkie obiekty gry (wrogów, serwer itp.)
     for (auto& o : m_objects) {
         o->update(dt);
     }
 
     // Sprawdza, czy wrogowie doszli do serwera (i zadaje mu obrażenia)
     for (auto& o : m_objects) {
-        if (!o->isAlive()) continue;
+        if (o->isAlive()) continue;
 
         if (Enemy* e = dynamic_cast<Enemy*>(o.get())) {
             if (e->reachedServer()) {
@@ -79,7 +97,7 @@ void PlayState::update(float dt) {
                        [](const std::unique_ptr<GameObject>& o) { return !o->isAlive(); }),
         m_objects.end());
 
-    // Prosty warunek przegranej dla M2
+    // Prosty warunek przegranej
     if (m_serverHealth <= 0) {
         std::cout << "GAME OVER! Serwer został zniszczony.\n";
         m_game.changeState(std::make_unique<MainMenuState>(m_game)); // Zastępcze wyrzucenie do menu
@@ -114,8 +132,6 @@ void PlayState::drawBackground(sf::RenderWindow& window) {
 
     window.draw(grid);
 }
-
-// Nowa funkcja wyciągnięta częściowo z gotowego projektu
 void PlayState::drawPaths(sf::RenderWindow& window) {
     const sf::Color darkBase(22, 34, 52);
     const sf::Color lineBase(0, 120, 150);

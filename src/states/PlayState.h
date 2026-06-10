@@ -36,7 +36,8 @@ private:
     int   m_serverMaxHealth = 20;
     float m_time = 0.f; // czas uzywany do animacji
 
-    float m_spawnTimer = 0.f;                           // Licznik czasu do spawnowania kolejnych fal/wrogów
+    float m_spawnTimer = 0.f;                               // Licznik czasu do spawnowania kolejnych wrogów
+    float m_nextSpawnDelay = 1.0f;                          // Losowy czas do następnego wroga
     std::vector<std::unique_ptr<Path>> m_paths;        // Wektor przechowujący ścieżki na mapie
     LevelMap m_levelMap;                                // Przechowuje aktualny układ poziomów (pozycje, tory)
 };

@@ -115,7 +115,7 @@ void ServerCore::takeDamage(int damage) {
     if (damage <= 0 || m_health <= 0) return;
 
     m_health -= damage;
-    m_hitFlash = 0.2f; // Serwer podświetli się na ułamek sekundy (masz to już zaimplementowane w draw!)
+    m_hitFlash = 0.2f; // Serwer podświetli się na ułamek sekundy
 
     if (m_health < 0) {
         m_health = 0;

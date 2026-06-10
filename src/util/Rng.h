@@ -2,25 +2,23 @@
 #include <random>
 
 // =============================================================
-// Rng - wspolny generator liczb losowych dla calej gry
-// Uzywany do losowania liczb, typow przeciwnikow i szans na zdarzenia
+//  Rng - centralny generator liczb losowych (Mersenne Twister).
 // =============================================================
 class Rng {
 public:
-    // Ustawia ziarno generatora
+    // Inicjalizacja generatora podanym ziarnem (domyslnie z urzadzenia losowego).
     static void seed(unsigned s);
-
-    // Ustawia losowe ziarno generatora
     static void seedRandom();
 
-    // Losuje liczbe calkowita z przedzialu min-max
+    // Losowa liczba calkowita z przedzialu [min, max] (wlacznie).
     static int range(int min, int max);
 
-    // Losuje liczbe zmiennoprzecinkowa z przedzialu min-max
+    // Losowa liczba zmiennoprzecinkowa z przedzialu [min, max).
     static float rangef(float min, float max);
 
-    // Zwraca true z podanym prawdopodobienstwem 0-1
+    // Zwraca true z prawdopodobienstwem p (0.0 - 1.0).
     static bool chance(float p);
+
 private:
     static std::mt19937 s_engine;
 };
