@@ -1,5 +1,6 @@
 #include "util/Paths.h"
 #include <filesystem>
+#include <iostream>
 
 namespace fs = std::filesystem;
 

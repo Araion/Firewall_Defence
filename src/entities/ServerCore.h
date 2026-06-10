@@ -1,6 +1,7 @@
 #pragma once
 #include "core/GameObject.h"
 #include <memory>
+#include <string>
 
 class ResourceManager;
 
@@ -20,6 +21,10 @@ public:
 
     void setHealth(int current, int max) { m_health = current; m_maxHealth = max; }
 
+    void takeDamage(int damage);
+    bool isDestroyed() const;
+    int getHealth() const { return m_health; }
+
 private:
     static constexpr int kVariants = 3; // warianty zdrowia: dobry, sredni, niski
 
@@ -36,4 +41,7 @@ private:
     sf::Vector2f m_size{96.f, 140.f};
     int m_health = 20;
     int m_maxHealth = 20;
+
+    float m_hitFlash = 0.f;
+    float m_time = 0.f;
 };

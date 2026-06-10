@@ -111,3 +111,17 @@ void ServerCore::draw(sf::RenderWindow& window) {
     fill.setFillColor(healthColor);
     window.draw(fill);
 }
+void ServerCore::takeDamage(int damage) {
+    if (damage <= 0 || m_health <= 0) return;
+
+    m_health -= damage;
+    m_hitFlash = 0.2f; // Serwer podświetli się na ułamek sekundy (masz to już zaimplementowane w draw!)
+
+    if (m_health < 0) {
+        m_health = 0;
+    }
+}
+
+bool ServerCore::isDestroyed() const {
+    return m_health <= 0;
+}
