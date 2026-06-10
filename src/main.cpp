@@ -1,6 +1,6 @@
 #include "core/Game.h"
-#include <iostream>
 #include <exception>
+#include <iostream>
 
 using namespace std;
 
@@ -10,7 +10,7 @@ int main()
     try {
         Game game;
         game.run();
-    } catch (const exception& ex) {
+    } catch (const exception &ex) {
         cout << "[FATAL] Wyjatek: " << ex.what() << "\n";
         return 1;
     } catch (...) {
