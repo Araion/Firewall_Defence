@@ -96,3 +96,6 @@ Testing/
 # IDE/editor folders
 .vscode/
 .idea/
+
+#sfml
+SFML-2.6.2/
