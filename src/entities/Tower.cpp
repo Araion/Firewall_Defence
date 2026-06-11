@@ -84,6 +84,11 @@ void Tower::upgrade() {
     applyLevelStats();
 }
 
+void Tower::setLevelDirect(int level) {
+    m_level = std::max(1, std::min(kMaxLevel, level));
+    applyLevelStats();
+}
+
 int Tower::getUpgradeCost() const {
     return static_cast<int>(m_cost * (0.5f + 0.4f * m_level));
 }
@@ -99,6 +104,7 @@ Enemy* Tower::acquireTarget() const {
 
     // Wybiera przeciwnika najdalej przesunietego po sciezce
     for (Enemy* enemy : m_state.enemies()) {
+        if (!enemy->isTargetableBy(getTypeName())) continue;
         float distance = MathUtils::distance(m_position, enemy->getPosition());
 
         if (distance > range)
@@ -162,7 +168,8 @@ void Tower::update(float dt) {
 
     if (m_canShoot && m_target && m_cooldownTimer <= 0.f) {
         attack();
-        m_cooldownTimer = m_fireCooldown;
+        // Overclock Tower skraca czas przeladowania
+        m_cooldownTimer = m_fireCooldown / std::max(0.01f, m_fireRateBoost);
     }
 }
 

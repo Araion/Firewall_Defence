@@ -23,6 +23,18 @@ public:
     // Spowolnienie: factor < 1 (np. 0.65 = -35%) na czas 'duration'
     void applySlow(float factor, float duration);
 
+    // Obrazenia w czasie ("Corrupted") - dps przez 'duration' sekund (CorruptionTower)
+    void applyDot(float dps, float duration);
+
+    // --- Szyfrowanie (wykrywanie przez DataCleaner) ---
+    void setEncrypted(bool e) { m_encrypted = e; }
+    bool isEncrypted() const { return m_encrypted; }
+    bool isDetected() const { return m_detected; }
+    void markDetected() { m_detected = true; } // wywoluje skan DataCleanera
+
+    // Czy wroga moze namierzyc dany typ wiezy
+    bool isTargetableBy(const std::string& towerType) const;
+
     bool  reachedServer() const { return m_reachedServer; }
     int   getServerDamage() const { return m_serverDamage; }
     int   getReward() const { return m_reward; }
@@ -34,6 +46,9 @@ public:
     float getRadius() const { return m_bodyRadius; }
     sf::Color getBodyColor() const { return m_bodyColor; }
 
+    // Do wczytania stanu gry (SaveManager)
+    void setHp(float hp) { m_hp = hp; }
+    void setDistance(float d) { m_distance = d; }
 protected:
     const Path* m_path = nullptr;
     float m_distance = 0.f;
@@ -46,6 +61,8 @@ protected:
 
     float m_slowFactor = 1.f; // mnoznik predkosci (1 = pelna)
     float m_slowTimer = 0.f;  // pozostaly czas spowolnienia (s)
+    float m_dotDps = 0.f;     // obrazenia na sekunde (DoT - CorruptionTower)
+    float m_dotTimer = 0.f;   // pozostaly czas DoT (s)
     float m_animTime = 0.f;
     float m_facing = 0.f;
 
@@ -56,6 +73,8 @@ protected:
     float m_bodyRadius = 14.f;
 
     bool m_reachedServer = false;
+    bool m_encrypted = false;  // niewidoczny dla Antivirus/Laser do czasu wykrycia
+    bool m_detected = false;   // wykryty przez DataCleaner
     PlayState* m_owner = nullptr;
 
     virtual void drawBody(sf::RenderWindow& window);

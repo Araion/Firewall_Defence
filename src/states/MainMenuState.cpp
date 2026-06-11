@@ -1,6 +1,7 @@
 #include "states/MainMenuState.h"
 #include "states/PlayState.h"
 #include "states/SettingsState.h"
+#include "states/HighScoreState.h"
 #include "core/Game.h"
 #include "managers/AudioManager.h"
 #include "util/Theme.h"
@@ -8,7 +9,7 @@
 #include <cmath>
 
 // Indeksy przyciskow menu
-enum MenuButton { BtnNewGame = 0, BtnSettings, BtnExit, BtnCount };
+enum MenuButton { BtnNewGame = 0, BtnLoad, BtnScores, BtnSettings, BtnExit, BtnCount };
 
 MainMenuState::MainMenuState(Game& game) : GameState(game) {
     auto& res = m_game.getResources();
@@ -50,10 +51,10 @@ void MainMenuState::buildButtons() {
     auto& res = m_game.getResources();
     const sf::Font& font = res.getFont();
 
-    const char* labels[BtnCount] = { "NOWA GRA", "USTAWIENIA", "WYJSCIE" };
+    const char* labels[BtnCount] = { "NOWA GRA", "WCZYTAJ GRE", "TABLICA WYNIKOW", "USTAWIENIA", "WYJSCIE" };
 
     const float w = 340.f, h = 50.f, gap = 13.f;
-    const float startY = 340.f;
+    const float startY = 285.f;
     const float x = 640.f - w / 2.f;
 
     m_buttons.clear();
@@ -71,6 +72,16 @@ void MainMenuState::onButtonClicked(int index) {
     switch (index) {
         case BtnNewGame:
             m_game.changeState(std::make_unique<PlayState>(m_game));
+            break;
+        case BtnLoad: {
+            // Tworzymy rozgrywke i probujemy wczytac zapis - gdy sie nie uda zostajemy w menu
+            auto play = std::make_unique<PlayState>(m_game);
+            if (play->loadGame())
+                m_game.changeState(std::move(play));
+            break;
+        }
+        case BtnScores:
+            m_game.changeState(std::make_unique<HighScoreState>(m_game));
             break;
         case BtnSettings:
             m_game.changeState(std::make_unique<SettingsState>(m_game));

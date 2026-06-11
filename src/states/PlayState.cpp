@@ -1,6 +1,7 @@
 #include "states/PlayState.h"
 #include "core/Game.h"
 #include "states/MainMenuState.h"
+#include "states/GameOverState.h"
 #include "entities/ServerCore.h"
 #include "entities/Enemy.h"
 #include "entities/VirusEnemy.h"
@@ -13,10 +14,15 @@
 #include "entities/AntivirusTower.h"
 #include "entities/FirewallTower.h"
 #include "entities/LaserTower.h"
+#include "entities/DataCleanerTower.h"
+#include "entities/OverclockTower.h"
+#include "entities/CorruptionTower.h"
 #include "entities/EMPTower.h"
 #include "entities/ExplosionEffect.h"
 #include "managers/ResourceManager.h"
 #include "managers/ConfigManager.h"
+#include "managers/AudioManager.h"
+#include "managers/SaveManager.h"
 #include "util/MapFactory.h"
 #include "util/MathUtils.h"
 #include "util/Rng.h"
@@ -26,13 +32,66 @@
 #include <string>
 #include <cmath>
 
+namespace {
+// Mapowanie nazwy typu wiezy (getTypeName) na TowerType (do wczytania zapisu)
+bool towerTypeFromName(const std::string& n, TowerType& out) {
+    if (n == "AntivirusTower")        out = TowerType::Antivirus;
+    else if (n == "FirewallTower")    out = TowerType::Firewall;
+    else if (n == "LaserTower")       out = TowerType::Laser;
+    else if (n == "DataCleanerTower") out = TowerType::DataCleaner;
+    else if (n == "OverclockTower")   out = TowerType::Overclock;
+    else if (n == "CorruptionTower")  out = TowerType::Corruption;
+    else if (n == "EMPTower")         out = TowerType::EMP;
+    else return false;
+    return true;
+}
+}
+
 PlayState::PlayState(Game& game) : GameState(game) {
     m_serverMaxHealth = m_game.getConfig().getInt("serverHealth", 20);
     m_serverHealth = m_serverMaxHealth;
     m_credits = m_game.getConfig().getInt("startCredits", 300);
+    m_difficulty = m_game.getConfig().getInt("difficulty", 1);
+
+    // Losowe ziarno mapy (zapamietane, by zapis/wczyt odtworzyl ten sam uklad)
+    unsigned seed = static_cast<unsigned>(Rng::range(1, 1000000));
+    buildBoard(seed, m_difficulty);
+
+    // Przyciski panelu zaznaczonej wiezy
+    const sf::Font& font = m_game.getResources().getFont();
+
+    m_btnUpgrade.setup(font, "ULEPSZ", {16.f, kHudH + 200.f}, {184.f, 32.f}, 17);
+    m_btnUpgrade.setColors(Theme::PanelSolid, Theme::NeonCyan, Theme::TextMain, Theme::NeonCyan);
+
+    m_btnSell.setup(font, "SPRZEDAJ", {16.f, kHudH + 238.f}, {184.f, 32.f}, 17);
+    m_btnSell.setColors(Theme::PanelSolid, Theme::Danger, Theme::TextMain, Theme::Danger);
+
+    playMusic("music_game");
+}
+
+PlayState::~PlayState() = default;
+
+void PlayState::playMusic(const std::string& name) {
+    m_game.getAudio().playMusic(name);
+}
+
+void PlayState::buildBoard(unsigned seed, int difficulty) {
+    // Czysci poprzedni uklad (istotne przy wczytywaniu gry)
+    m_objects.clear();
+    m_pendingSpawns.clear();
+    m_paths.clear();
+    m_frameEnemies.clear();
+    m_frameTowers.clear();
+    m_server = nullptr;
+    m_selectedTower = nullptr;
+    m_preview.reset();
+    m_buildSelection = -1;
+
+    m_mapSeed = seed;
+    m_difficulty = difficulty;
 
     // Ładujemy mapę i jej ścieżki
-    m_levelMap = MapFactory::generate(1, 12345); // Poziom normalny, stałe seed do testów
+    m_levelMap = MapFactory::generate(difficulty, seed);
 
     for (const auto& lane : m_levelMap.lanes) {
         m_paths.push_back(std::make_unique<Path>(lane));
@@ -43,40 +102,31 @@ PlayState::PlayState(Game& game) : GameState(game) {
     server->setHealth(m_serverHealth, m_serverMaxHealth);
     m_server = server.get();
     m_objects.push_back(std::move(server));
-
-    // Przyciski panelu zaznaczonej wiezy
-    const sf::Font& font = m_game.getResources().getFont();
-
-    m_btnUpgrade.setup(font, "ULEPSZ", {16.f, kHudH + 200.f}, {184.f, 32.f}, 17);
-    m_btnUpgrade.setColors(Theme::PanelSolid, Theme::NeonCyan, Theme::TextMain, Theme::NeonCyan);
-
-    m_btnSell.setup(font, "SPRZEDAJ", {16.f, kHudH + 238.f}, {184.f, 32.f}, 17);
-    m_btnSell.setColors(Theme::PanelSolid, Theme::Danger, Theme::TextMain, Theme::Danger);
 }
 
-PlayState::~PlayState() = default;
+std::unique_ptr<Enemy> PlayState::createEnemyByName(const std::string& name, const Path* path) {
+    auto& res = m_game.getResources();
+    if (name == "VirusEnemy")        return std::make_unique<VirusEnemy>(res, path);
+    if (name == "TrojanEnemy")       return std::make_unique<TrojanEnemy>(res, path);
+    if (name == "WormEnemy")         return std::make_unique<WormEnemy>(res, path);
+    if (name == "ProxyEnemy")        return std::make_unique<ProxyEnemy>(res, path);
+    if (name == "GlitchDroneEnemy")  return std::make_unique<GlitchDroneEnemy>(res, path);
+    if (name == "BossMalwareEnemy")  return std::make_unique<BossMalwareEnemy>(res, path);
+    return nullptr;
+}
 
 void PlayState::spawnEnemy() {
-    if (m_paths.empty())
-        return;
+    if (m_paths.empty()) return;
+    const Path* path = m_paths[Rng::range(0, static_cast<int>(m_paths.size()) - 1)].get();
 
-    int pathIdx = Rng::range(0, static_cast<int>(m_paths.size()) - 1);
+    static const char* types[] = {
+        "VirusEnemy", "TrojanEnemy", "WormEnemy", "ProxyEnemy", "GlitchDroneEnemy", "BossMalwareEnemy"
+    };
+    auto enemy = createEnemyByName(types[Rng::range(0, 5)], path);
+    if (!enemy) return;
 
-    int typeRoll = Rng::range(0, 5);
-    std::unique_ptr<Enemy> enemy;
-
-    if (typeRoll == 0) {
-        enemy = std::make_unique<VirusEnemy>(m_game.getResources(), m_paths[pathIdx].get());
-    } else if (typeRoll == 1) {
-        enemy = std::make_unique<TrojanEnemy>(m_game.getResources(), m_paths[pathIdx].get());
-    } else if (typeRoll == 2) {
-        enemy = std::make_unique<WormEnemy>(m_game.getResources(), m_paths[pathIdx].get());
-    } else if (typeRoll == 3) {
-        enemy = std::make_unique<ProxyEnemy>(m_game.getResources(), m_paths[pathIdx].get());
-    } else if (typeRoll == 4) {
-        enemy = std::make_unique<GlitchDroneEnemy>(m_game.getResources(), m_paths[pathIdx].get());
-    } else {
-        enemy = std::make_unique<BossMalwareEnemy>(m_game.getResources(), m_paths[pathIdx].get());}
+    // Czesc wrogow jest zaszyfrowana - niewidoczna dla Antivirus/Laser do wykrycia
+    if (Rng::chance(0.30f)) enemy->setEncrypted(true);
 
     m_objects.push_back(std::move(enemy));
 }
@@ -106,28 +156,113 @@ void PlayState::spawnExplosion(sf::Vector2f pos, sf::Color color, float scale) {
 }
 
 // =============================================================
+// Zapis / wczytanie stanu gry
+// =============================================================
+
+std::vector<PlayState::TowerSave> PlayState::snapshotTowers() const {
+    std::vector<TowerSave> out;
+
+    for (const auto& object : m_objects) {
+        if (Tower* tower = dynamic_cast<Tower*>(object.get())) {
+            sf::Vector2f p = tower->getPosition();
+            out.push_back({tower->getTypeName(), tower->getLevel(), p.x, p.y});
+        }
+    }
+
+    return out;
+}
+
+int PlayState::pathIndexOf(const Path* p) const {
+    for (int i = 0; i < static_cast<int>(m_paths.size()); ++i)
+        if (m_paths[i].get() == p) return i;
+    return 0;
+}
+
+std::vector<PlayState::EnemySave> PlayState::snapshotEnemies() const {
+    std::vector<EnemySave> out;
+
+    for (const auto& object : m_objects) {
+        if (Enemy* enemy = dynamic_cast<Enemy*>(object.get())) {
+            if (!enemy->isAlive() || enemy->reachedServer())
+                continue;
+
+            out.push_back({enemy->getTypeName(), enemy->getHp(),
+                           pathIndexOf(enemy->getPath()), enemy->getDistance()});
+        }
+    }
+
+    return out;
+}
+
+void PlayState::applyLoadedMeta(int credits, int serverHp, int score) {
+    m_credits = credits;
+    m_score = score;
+    m_serverHealth = serverHp;
+
+    if (m_server)
+        m_server->setHealth(m_serverHealth, m_serverMaxHealth);
+}
+
+void PlayState::placeTowerFromSave(const std::string& type, int level, sf::Vector2f pos) {
+    TowerType tt;
+
+    if (!towerTypeFromName(type, tt))
+        return;
+
+    auto tower = createTower(tt);
+
+    if (!tower)
+        return;
+
+    tower->setLevelDirect(level);
+    tower->setPosition(pos);
+    m_objects.push_back(std::move(tower));
+}
+
+void PlayState::addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance) {
+    if (pathIndex < 0 || pathIndex >= static_cast<int>(m_paths.size()))
+        return;
+
+    auto enemy = createEnemyByName(type, m_paths[pathIndex].get());
+
+    if (!enemy)
+        return;
+
+    enemy->setHp(hp);
+    enemy->setDistance(distance);
+    m_objects.push_back(std::move(enemy));
+}
+
+void PlayState::finishLoad() {
+    rebuildCaches();
+}
+
+bool PlayState::saveGame() {
+    SaveManager sm;
+    return sm.save(*this);
+}
+
+bool PlayState::loadGame() {
+    SaveManager sm;
+    return sm.load(*this);
+}
+
+// =============================================================
 // Budowanie i wybor wiez
 // =============================================================
 
 std::unique_ptr<Tower> PlayState::createTower(TowerType type) {
     auto& res = m_game.getResources();
     auto& cfg = m_game.getConfig();
-
     switch (type) {
-    case TowerType::Antivirus:
-        return std::make_unique<AntivirusTower>(*this, res, cfg);
-
-    case TowerType::Firewall:
-        return std::make_unique<FirewallTower>(*this, res, cfg);
-
-    case TowerType::Laser:
-        return std::make_unique<LaserTower>(*this, res, cfg);
-
-    case TowerType::EMP:
-        return std::make_unique<EMPTower>(*this, res, cfg);
-
-    default:
-        return nullptr;
+    case TowerType::Antivirus:   return std::make_unique<AntivirusTower>(*this, res, cfg);
+    case TowerType::Firewall:    return std::make_unique<FirewallTower>(*this, res, cfg);
+    case TowerType::Laser:       return std::make_unique<LaserTower>(*this, res, cfg);
+    case TowerType::DataCleaner: return std::make_unique<DataCleanerTower>(*this, res, cfg);
+    case TowerType::Overclock:   return std::make_unique<OverclockTower>(*this, res, cfg);
+    case TowerType::Corruption:  return std::make_unique<CorruptionTower>(*this, res, cfg);
+    case TowerType::EMP:         return std::make_unique<EMPTower>(*this, res, cfg);
+    default:                     return nullptr;
     }
 }
 
@@ -292,7 +427,10 @@ void PlayState::handleEvent(const sf::Event& e) {
             return;
         }
 
-        // Klawisze 1-4 wybieraja typ wiezy do budowy
+        if (e.key.code == sf::Keyboard::F5) { saveGame(); return; } // szybki zapis
+        if (e.key.code == sf::Keyboard::F9) { loadGame(); return; } // wczytanie
+
+        // Klawisze 1-7 wybieraja typ wiezy do budowy
         if (e.key.code >= sf::Keyboard::Num1 && e.key.code <= sf::Keyboard::Num4) {
             int idx = e.key.code - sf::Keyboard::Num1;
 
@@ -324,8 +462,10 @@ void PlayState::rebuildCaches() {
 
         if (Enemy* enemy = dynamic_cast<Enemy*>(object.get()))
             m_frameEnemies.push_back(enemy);
-        else if (Tower* tower = dynamic_cast<Tower*>(object.get()))
+        else if (Tower* tower = dynamic_cast<Tower*>(object.get())) {
+            tower->resetFireRateBoost(); // boost aury Overclocka naliczany co klatke
             m_frameTowers.push_back(tower);
+        }
     }
 }
 
@@ -383,6 +523,8 @@ void PlayState::update(float dt) {
     }
 
     rebuildCaches();
+    // Aura Overclocka przed aktualizacja wiez
+    for (Tower* t : m_frameTowers) t->applyAura(m_frameTowers);
 
     for (auto& o : m_objects) {
         o->update(dt);
@@ -394,10 +536,9 @@ void PlayState::update(float dt) {
     removeDead();
     flushPending();
 
-    // Prosty warunek przegranej
-    if (m_serverHealth <= 0) {
-        m_game.changeState(std::make_unique<MainMenuState>(m_game)); // Zastępcze wyrzucenie do menu
-    }
+    // Serwer zniszczony - ekran konca gry (z wynikiem do tablicy)
+    if (m_serverHealth <= 0)
+        m_game.changeState(std::make_unique<GameOverState>(m_game, m_score, 0, m_difficulty));
 }
 
 // =============================================================
@@ -605,7 +746,7 @@ void PlayState::drawHud(sf::RenderWindow& window) {
     label("WYNIK  " + std::to_string(m_score), 330.f, Theme::TextMain);
     label("SERWER  " + std::to_string(m_serverHealth) + "/" + std::to_string(m_serverMaxHealth),
           560.f, Theme::NeonCyan);
-    label("1-4: wieza   ESC: menu", 1050.f, Theme::TextDim);
+    label("1-7: wieza   F5/F9: zapis/wczyt   ESC: menu", 900.f, Theme::TextDim);
 }
 
 void PlayState::drawTowerPanel(sf::RenderWindow& window) {

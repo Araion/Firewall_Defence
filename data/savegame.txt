@@ -1,0 +1,17 @@
+[meta]
+credits=280
+score=50
+serverHealth=5
+mapSeed=793412
+difficulty=1
+[towers]
+[enemies]
+TrojanEnemy 60 0 542.71
+WormEnemy 60 0 642.531
+VirusEnemy 15 0 324.555
+BossMalwareEnemy 600 2 186.918
+BossMalwareEnemy 600 1 127.502
+GlitchDroneEnemy 45 1 330.459
+ProxyEnemy 60 2 90.457
+TrojanEnemy 100 1 29.192
+WormEnemy 60 1 4.15898

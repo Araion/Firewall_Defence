@@ -56,13 +56,16 @@ void BulletProjectile::onHit(Enemy& enemy, PlayState& state) {
     if (m_splashRadius > 0.f) {
         // Zadaje obrazenia wszystkim przeciwnikom w zasiegu wybuchu
         for (Enemy* e : state.enemies()) {
-            if (MathUtils::distance(m_position, e->getPosition()) <= m_splashRadius)
+            if (MathUtils::distance(m_position, e->getPosition()) <= m_splashRadius) {
                 e->takeDamage(m_damage);
+                if (m_dotDps > 0.f) e->applyDot(m_dotDps, m_dotDuration);
+            }
         }
 
         state.spawnExplosion(m_position, m_color, m_splashRadius / 28.f);
     } else {
         enemy.takeDamage(m_damage);
+        if (m_dotDps > 0.f) enemy.applyDot(m_dotDps, m_dotDuration); // DoT
     }
 
     kill();

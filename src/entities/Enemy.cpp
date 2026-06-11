@@ -36,6 +36,20 @@ void Enemy::applySlow(float factor, float duration) {
     if (duration > m_slowTimer) m_slowTimer = duration;
 }
 
+void Enemy::applyDot(float dps, float duration) {
+    // Bierzemy silniejszy DoT i odswiezamy czas trwania
+    m_dotDps = std::max(m_dotDps, dps);
+    m_dotTimer = std::max(m_dotTimer, duration);
+}
+
+bool Enemy::isTargetableBy(const std::string& towerType) const {
+    // Zaszyfrowany i niewykryty jest niewidoczny dla wiez celujacych
+    if (m_encrypted && !m_detected)
+        if (towerType == "AntivirusTower" || towerType == "LaserTower")
+            return false;
+    return true;
+}
+
 void Enemy::update(float dt) {
     m_animTime += dt;
 
@@ -43,6 +57,14 @@ void Enemy::update(float dt) {
     if (m_slowTimer > 0.f) {
         m_slowTimer -= dt;
         if (m_slowTimer <= 0.f) { m_slowTimer = 0.f; m_slowFactor = 1.f; }
+    }
+
+    // Obrazenia w czasie
+    if (m_dotTimer > 0.f) {
+        m_hp -= m_dotDps * dt;
+        m_dotTimer -= dt;
+        if (m_dotTimer <= 0.f) { m_dotTimer = 0.f; m_dotDps = 0.f; }
+        if (m_hp <= 0.f) { m_hp = 0.f; kill(); return; } // zginal od DoT
     }
 
     // Prosty ruch po ścieżce
@@ -115,6 +137,34 @@ void Enemy::drawHealthBar(sf::RenderWindow& window) {
 }
 
 void Enemy::draw(sf::RenderWindow& window) {
+    // Aura "Corrupted" (DoT) - zielone czastki wokol ciala
+    if (m_dotTimer > 0.f) {
+        for (int i = 0; i < 4; ++i) {
+            float ang = m_animTime * 4.f + i * 1.57f;
+            float rad = m_bodyRadius + 4.f + 2.f * std::sin(m_animTime * 9.f + i);
+            sf::CircleShape p(2.5f);
+            p.setOrigin(2.5f, 2.5f);
+            p.setPosition(m_position.x + std::cos(ang) * rad,
+                          m_position.y + std::sin(ang) * rad);
+            p.setFillColor(sf::Color(150, 255, 60, 200));
+            window.draw(p);
+        }
+    }
+
     drawBody(window);
+
+    // Zaszyfrowany i niewykryty
+    if (m_encrypted && !m_detected) {
+        float r = m_bodyRadius + 5.f;
+        sf::CircleShape lock(r, 6);
+        lock.setOrigin(r, r);
+        lock.setPosition(m_position);
+        lock.setRotation(m_animTime * 30.f);
+        lock.setFillColor(sf::Color(120, 120, 160, 50));
+        lock.setOutlineThickness(2.f);
+        lock.setOutlineColor(sf::Color(180, 180, 220, 200));
+        window.draw(lock);
+    }
+
     drawHealthBar(window);
 }

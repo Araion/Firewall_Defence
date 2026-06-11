@@ -35,10 +35,31 @@ public:
 
     const std::vector<Enemy*>& enemies() const { return m_frameEnemies; }
     class ResourceManager& resources();
+    void playMusic(const std::string& name);
+
+    // --- Zapis / wczytanie stanu (SaveManager) ---
+    struct TowerSave { std::string type; int level; float x, y; };
+    struct EnemySave { std::string type; float hp; int pathIndex; float distance; };
+    std::vector<TowerSave> snapshotTowers() const;
+    std::vector<EnemySave> snapshotEnemies() const;
+    int credits() const { return m_credits; }
+    int score() const { return m_score; }
+    int serverHealth() const { return m_serverHealth; }
+    unsigned mapSeed() const { return m_mapSeed; }
+    int difficultyLevel() const { return m_difficulty; }
+    void buildBoard(unsigned seed, int difficulty);     // mapa + sciezki + serwer
+    void applyLoadedMeta(int credits, int serverHp, int score);
+    void placeTowerFromSave(const std::string& type, int level, sf::Vector2f pos);
+    void addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance);
+    void finishLoad();
+    bool saveGame();   // szybki zapis (F5)
+    bool loadGame();   // wczytanie (F9 / menu)
 
 private:
     // Tworzenie przeciwnikow
     void spawnEnemy();
+    std::unique_ptr<Enemy> createEnemyByName(const std::string& name, const Path* path);
+    int  pathIndexOf(const Path* p) const;
 
     // Aktualizacja obiektow gry
     void rebuildCaches();
@@ -92,6 +113,8 @@ private:
     int m_serverMaxHealth = 20;
     int m_credits = 300;
     int m_score = 0;
+    unsigned m_mapSeed = 0;
+    int   m_difficulty = 1;
 
     float m_spawnTimer = 0.f;
     float m_nextSpawnDelay = 1.0f;

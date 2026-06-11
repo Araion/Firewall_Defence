@@ -36,6 +36,7 @@ public:
     void upgrade();
 
     bool canUpgrade() const { return m_level < kMaxLevel; }
+    void setLevelDirect(int level);  // ustawia poziom wprost (do wczytania zapisu)
     int getUpgradeCost() const;
     int getSellValue() const;
 
@@ -51,6 +52,14 @@ public:
     float effectiveRange() const { return m_range; }
 
     void setSelected(bool s) { m_selected = s; }
+
+    // Mnoznik szybkostrzelnosci z aury OverclockTower (1 = brak)
+    void setFireRateBoost(float b) { m_fireRateBoost = b; }
+    void resetFireRateBoost() { m_fireRateBoost = 1.f; }
+    float fireRateBoost() const { return m_fireRateBoost; }
+
+    // Aura wsparcia (OverclockTower)
+    virtual void applyAura(const std::vector<Tower*>& towers) { (void)towers; }
 
 protected:
     static constexpr int kMaxLevel = 3;
@@ -115,6 +124,7 @@ protected:
     int m_invested = 0;
     float m_cooldownTimer = 0.f;
     float m_barrelAngle = 0.f;
+    float m_fireRateBoost = 1.f;
     float m_animTime = 0.f;
     bool m_selected = false;
 

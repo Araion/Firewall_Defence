@@ -26,9 +26,13 @@ public:
     // Wartosc 0 oznacza obrazenia tylko w trafiony cel
     void setSplashRadius(float r) { m_splashRadius = r; }
 
+    // Obrazenia w czasie nakladane przy trafieniu (CorruptionTower)
+    void setDot(float dps, float duration) { m_dotDps = dps; m_dotDuration = duration; }
+
 private:
-    // Obrazenia obszarowe pocisku
     float m_splashRadius = 0.f;
+    float m_dotDps = 0.f;
+    float m_dotDuration = 0.f;
 
     // Ruch i zasieg pocisku
     sf::Vector2f m_velocity;
