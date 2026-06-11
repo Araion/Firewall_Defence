@@ -14,6 +14,8 @@ WormEnemy::WormEnemy(ResourceManager& res, const Path* path, int gen)
     m_gen(wormClamp(gen)) {
     m_bodyColor = sf::Color(80, 230, 120); // jaskrawa zielen
     m_bodyRadius = wormRadius(m_gen);
+    m_reward = 15;
+    m_points = 15;
 }
 
 void WormEnemy::drawBody(sf::RenderWindow& window) {

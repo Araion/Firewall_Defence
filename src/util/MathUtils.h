@@ -48,4 +48,18 @@ inline float rotateTowards(float current, float target, float maxStep) {
 inline float dot(const sf::Vector2f& a, const sf::Vector2f& b) {
     return a.x * b.x + a.y * b.y;
 }
+
+// Najmniejsza odleglosc punktu 'p' od odcinka a-b (sprawdzanie, czy miejsce
+// budowy wiezy nie lezy na sciezce wrogow)
+inline float pointSegmentDistance(const sf::Vector2f& p,
+                                  const sf::Vector2f& a, const sf::Vector2f& b) {
+    sf::Vector2f ab = b - a;
+    float len2 = ab.x * ab.x + ab.y * ab.y;
+    if (len2 < 1e-6f) return distance(p, a);
+    float t = dot(p - a, ab) / len2;
+    if (t < 0.f) t = 0.f; if (t > 1.f) t = 1.f;
+    sf::Vector2f proj = a + ab * t;
+    return distance(p, proj);
 }
+}
+

@@ -18,8 +18,15 @@ public:
     void draw(sf::RenderWindow& window) override;
     sf::FloatRect getBounds() const override;
 
+    // Obrazenia od pociskow/lasera (zabicie -> nagroda + wynik w PlayState)
+    void takeDamage(float dmg);
+    // Spowolnienie: factor < 1 (np. 0.65 = -35%) na czas 'duration'
+    void applySlow(float factor, float duration);
+
     bool  reachedServer() const { return m_reachedServer; }
     int   getServerDamage() const { return m_serverDamage; }
+    int   getReward() const { return m_reward; }
+    int   getPoints() const { return m_points; }
     float getHp() const { return m_hp; }
     float getMaxHp() const { return m_maxHp; }
     const Path* getPath() const { return m_path; }
@@ -34,7 +41,11 @@ protected:
     float m_hp;
     float m_speed;
     int   m_serverDamage = 1;
+    int   m_reward = 0;       // kredyty za zabicie przez wieze
+    int   m_points = 0;       // punkty wyniku za zabicie
 
+    float m_slowFactor = 1.f; // mnoznik predkosci (1 = pelna)
+    float m_slowTimer = 0.f;  // pozostaly czas spowolnienia (s)
     float m_animTime = 0.f;
     float m_facing = 0.f;
 

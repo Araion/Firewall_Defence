@@ -7,4 +7,6 @@ VirusEnemy::VirusEnemy(ResourceManager& res, const Path* path)
     m_bodyColor = Theme::NeonMagenta;
     m_bodyRadius = 14.f;
     m_serverDamage = 1; // Ile HP zabiera serwerowi po dotarciu na koniec
+    m_reward = 10;
+    m_points = 10;
 }

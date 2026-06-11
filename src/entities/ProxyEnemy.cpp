@@ -5,6 +5,8 @@ ProxyEnemy::ProxyEnemy(ResourceManager& res, const Path* path)
     : Enemy(res, "assets/textures/proxy.png", path, 60.f, 70.f) {
     m_bodyColor = sf::Color(170, 130, 255);
     m_bodyRadius = 15.f;
+    m_reward = 18;
+    m_points = 20;
 }
 
 void ProxyEnemy::drawBody(sf::RenderWindow& window) {

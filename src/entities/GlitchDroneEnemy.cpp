@@ -5,6 +5,8 @@ GlitchDroneEnemy::GlitchDroneEnemy(ResourceManager& res, const Path* path)
     : Enemy(res, "assets/textures/glitch.png", path, 45.f, 110.f) {
     m_bodyColor = sf::Color(0, 229, 255);
     m_bodyRadius = 14.f;
+    m_reward = 20;
+    m_points = 30;
 }
 
 void GlitchDroneEnemy::drawBody(sf::RenderWindow& window) {

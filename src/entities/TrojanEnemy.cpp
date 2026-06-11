@@ -7,6 +7,8 @@ TrojanEnemy::TrojanEnemy(ResourceManager& res, const Path* path)
     m_bodyColor = sf::Color(255, 150, 40); // pomaranczowy
     m_bodyRadius = 18.f;
     m_serverDamage = 2; // wytrzymaly - po dotarciu zabiera serwerowi 2 HP
+    m_reward = 25;
+    m_points = 25;
 }
 
 void TrojanEnemy::drawBody(sf::RenderWindow& window) {

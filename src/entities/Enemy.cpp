@@ -21,11 +21,32 @@ Enemy::Enemy(ResourceManager& res, const std::string& texturePath, const Path* p
     }
 }
 
+void Enemy::takeDamage(float dmg) {
+    if (dmg <= 0.f) return;
+    m_hp -= dmg;
+    if (m_hp <= 0.f) {
+        m_hp = 0.f;
+        kill(); // zginal od obrazen (nie dotarl do serwera -> gracz dostaje nagrode)
+    }
+}
+
+void Enemy::applySlow(float factor, float duration) {
+    // Bierzemy silniejsze spowolnienie i odswiezamy czas trwania
+    if (factor < m_slowFactor || m_slowTimer <= 0.f) m_slowFactor = factor;
+    if (duration > m_slowTimer) m_slowTimer = duration;
+}
+
 void Enemy::update(float dt) {
     m_animTime += dt;
 
+    // Spowolnienie - mija po czasie
+    if (m_slowTimer > 0.f) {
+        m_slowTimer -= dt;
+        if (m_slowTimer <= 0.f) { m_slowTimer = 0.f; m_slowFactor = 1.f; }
+    }
+
     // Prosty ruch po ścieżce
-    m_distance += m_speed * dt;
+    m_distance += m_speed * m_slowFactor * dt;
 
     if (m_path && !m_path->empty()) {
         m_position = m_path->positionAt(m_distance);
