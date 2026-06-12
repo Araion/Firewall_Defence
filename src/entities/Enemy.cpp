@@ -6,8 +6,9 @@
 #include <cmath>
 
 Enemy::Enemy(ResourceManager& res, const std::string& texturePath, const Path* path,
-             float maxHp, float speed)
-    : m_path(path), m_maxHp(maxHp), m_hp(maxHp), m_speed(speed) {
+             float maxHp, float speed, int reward, int points)
+    : m_path(path), m_maxHp(maxHp), m_hp(maxHp), m_speed(speed),
+    m_reward(reward), m_points(points) {
     if (path && !path->empty()) m_position = path->start();
 
     if (!texturePath.empty()) {
@@ -24,9 +25,12 @@ Enemy::Enemy(ResourceManager& res, const std::string& texturePath, const Path* p
 void Enemy::takeDamage(float dmg) {
     if (dmg <= 0.f) return;
     m_hp -= dmg;
+
+    m_hitFlash = 0.12f;
+
     if (m_hp <= 0.f) {
         m_hp = 0.f;
-        kill(); // zginal od obrazen (nie dotarl do serwera -> gracz dostaje nagrode)
+        kill(); // zginal od obrazen
     }
 }
 
@@ -43,15 +47,18 @@ void Enemy::applyDot(float dps, float duration) {
 }
 
 bool Enemy::isTargetableBy(const std::string& towerType) const {
-    // Zaszyfrowany i niewykryty jest niewidoczny dla wiez celujacych
-    if (m_encrypted && !m_detected)
-        if (towerType == "AntivirusTower" || towerType == "LaserTower")
+    if (m_encrypted && !m_detected) {
+        bool heuristics = m_owner && m_owner->heuristics();
+
+        if (!heuristics && (towerType == "AntivirusTower" || towerType == "LaserTower"))
             return false;
+    }
     return true;
 }
 
 void Enemy::update(float dt) {
     m_animTime += dt;
+    if (m_hitFlash > 0.f) m_hitFlash -= dt;
 
     // Spowolnienie - mija po czasie
     if (m_slowTimer > 0.f) {
@@ -87,18 +94,20 @@ sf::FloatRect Enemy::getBounds() const {
 }
 
 void Enemy::drawBody(sf::RenderWindow& window) {
+    bool flash = m_hitFlash > 0.f;
     if (m_hasTexture) {
         auto ts = m_texture->getSize();
         float sc = ts.x > 0 ? (m_bodyRadius * Art::kEnemySizeMult) / static_cast<float>(ts.x) : 1.f;
         m_sprite.setScale(sc, sc);
         m_sprite.setPosition(m_position);
         m_sprite.setRotation(0.f);
-        m_sprite.setColor(sf::Color::White);
+        m_sprite.setColor(flash ? sf::Color(255, 255, 255) : sf::Color::White);
         window.draw(m_sprite);
         return;
     }
 
-    // Zastepczy wyglad: pulsujace cialo + rdzen
+    // Zastepczy wyglad
+    sf::Color body = flash ? sf::Color::White : m_bodyColor;
     float pulse = m_bodyRadius * (1.f + 0.06f * std::sin(m_animTime * 8.f));
 
     sf::CircleShape outer(pulse);
@@ -112,7 +121,8 @@ void Enemy::drawBody(sf::RenderWindow& window) {
     core.setPosition(m_position);
     core.setFillColor(m_bodyColor);
     core.setOutlineThickness(2.f);
-    core.setOutlineColor(sf::Color(m_bodyColor.r / 2, m_bodyColor.g / 2, m_bodyColor.b / 2));
+    core.setOutlineColor(flash ? sf::Color::White
+                               : sf::Color(body.r / 2, body.g / 2, body.b / 2));
     window.draw(core);
 }
 
@@ -137,7 +147,15 @@ void Enemy::drawHealthBar(sf::RenderWindow& window) {
 }
 
 void Enemy::draw(sf::RenderWindow& window) {
-    // Aura "Corrupted" (DoT) - zielone czastki wokol ciala
+    // Aura spowolnienia
+    if (m_slowTimer > 0.f) {
+        sf::CircleShape aura(m_bodyRadius + 6.f);
+        aura.setOrigin(m_bodyRadius + 6.f, m_bodyRadius + 6.f);
+        aura.setPosition(m_position);
+        aura.setFillColor(sf::Color(80, 160, 255, 60));
+        window.draw(aura);
+    }
+    // Aura "Corrupted" (DoT)
     if (m_dotTimer > 0.f) {
         for (int i = 0; i < 4; ++i) {
             float ang = m_animTime * 4.f + i * 1.57f;

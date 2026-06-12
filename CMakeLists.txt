@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(FirewallDefense VERSION 1.0 LANGUAGES CXX)
+project(FirewallDefense VERSION 1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT SFML_DIR)
-    if(EXISTS "${CMAKE_SOURCE_DIR}/libs/SFML-2.6.2/lib/cmake/SFML")
-        set(SFML_DIR "${CMAKE_SOURCE_DIR}/libs/SFML-2.6.2/lib/cmake/SFML")
-    elseif(EXISTS "${CMAKE_SOURCE_DIR}/SFML-2.6.2/lib/cmake/SFML")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/SFML-2.6.2/lib/cmake/SFML")
         set(SFML_DIR "${CMAKE_SOURCE_DIR}/SFML-2.6.2/lib/cmake/SFML")
+    elseif(EXISTS "C:/Users/HARDPC/Desktop/projekt/defense/SFML-2.6.2/lib/cmake/SFML")
+        set(SFML_DIR "C:/Users/HARDPC/Desktop/projekt/defense/SFML-2.6.2/lib/cmake/SFML")
     else()
         message(FATAL_ERROR "nie ma sfmla")
     endif()
