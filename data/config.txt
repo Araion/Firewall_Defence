@@ -12,8 +12,8 @@ towerCostPercent = 100
 enemyRewardPercent = 100
 
 # --- Audio (glosnosc 0-100, ekran ustawien) ---
-sfxVolume = 100
-musicVolume = 15
+sfxVolume = 50
+musicVolume = 20
 
 # --- Wzrost trudnosci z kazda fala ---
 waveHealthGrowth = 0.08

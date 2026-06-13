@@ -22,7 +22,7 @@ public:
 
     // Zwraca czcionke systemowa (ladowana raz z zasobow systemu operacyjnego).
     // Parametr domyslny = "" pozwala na wywolania zarowno z M3 jak i z M4!
-    const sf::Font& getFont(const std::string& relativePath = "");
+    const sf::Font& getFont();
 
     // Zwraca bufor dzwieku lub nullptr, gdy pliku nie ma.
     std::shared_ptr<sf::SoundBuffer> getSound(const std::string& relativePath);

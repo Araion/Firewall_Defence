@@ -1,17 +1,21 @@
 [meta]
-credits=280
-score=50
-serverHealth=5
-mapSeed=793412
-difficulty=1
+credits=113045
+score=122112
+serverHealth=20
+mapSeed=1558844660
+difficulty=0
 [towers]
+DataCleanerTower 3 866 359
+LaserTower 3 908 400
+OverclockTower 3 948 318
+LaserTower 3 908 457
+LaserTower 3 858 415
+LaserTower 3 861 314
+LaserTower 3 987 460
+FirewallTower 3 988 400
+LaserTower 3 1008 321
+EMPTower 3 1046 399
+EMPTower 3 946 272
+LaserTower 3 998 271
 [enemies]
-TrojanEnemy 60 0 542.71
-WormEnemy 60 0 642.531
-VirusEnemy 15 0 324.555
-BossMalwareEnemy 600 2 186.918
-BossMalwareEnemy 600 1 127.502
-GlitchDroneEnemy 45 1 330.459
-ProxyEnemy 60 2 90.457
-TrojanEnemy 100 1 29.192
-WormEnemy 60 1 4.15898
+VirusEnemy 13.13 0 969.2

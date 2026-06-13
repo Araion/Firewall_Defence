@@ -11,6 +11,7 @@ public:
               float hpScale = 1.f, float speedScale = 1.f, float rewardScale = 1.f);
 
     std::string getTypeName() const override { return "WormEnemy"; }
+    int generation() const { return m_gen; } // faza worma - do zapisu
     void onDeath(PlayState& state) override;
 
 protected:

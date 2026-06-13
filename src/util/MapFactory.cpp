@@ -19,11 +19,12 @@ struct Lcg {
     bool chance(int pct) { return static_cast<int>(next() % 100u) < pct; }
 };
 
-LevelMap mk(const char* name, std::vector<Lane> lanes) {
+LevelMap mk(const char* name, std::vector<Lane> lanes, std::vector<Lane> breaches) {
     LevelMap m;
     m.name = name;
     m.serverPos = {1180.f, 360.f};
     m.lanes = std::move(lanes);
+    m.breachLanes = std::move(breaches);
     return m;
 }
 
@@ -38,6 +39,15 @@ void dedupe(Lane& l) {
 } // namespace
 
 namespace MapFactory {
+
+LevelMap tutorialMap() {
+    LevelMap m = mk("Samouczek",
+                    {
+                     {{-40,360},{240,360},{240,290},{560,290},{560,430},{880,430},{880,360},{1180,360}},
+                     },
+                    { {{1040,-30},{1040,360},{1180,360}} });
+    return m;
+}
 
 LevelMap generate(int difficulty, unsigned seed) {
     Lcg rng(seed * 2654435761u + 0x85EBCA6Bu + static_cast<unsigned>(difficulty + 1) * 0x27D4EB2Fu);
@@ -103,6 +113,28 @@ LevelMap generate(int difficulty, unsigned seed) {
         lanes.push_back(std::move(lane));
     }
 
+    // Szablony breach - dwa rodzaje:
+    //  KRAWEDZIOWE - pelne tunele tuz przy serwerze,
+    //  SKROTY - zaczynaja sie w polowie planszy
+    std::vector<Lane> breaches;
+    {
+        float bxT = static_cast<float>(rng.range(1040, 1100));
+        breaches.push_back({{bxT, -30.f}, {bxT, SRV_Y}, {SRV_X, SRV_Y}});
+        if (n >= 3) {
+            float bxB = static_cast<float>(rng.range(1040, 1100));
+            breaches.push_back({{bxB, 750.f}, {bxB, SRV_Y}, {SRV_X, SRV_Y}});
+        }
+        // Skrot gorny: usta tunelu w srodku planszy, potem prosto do serwera
+        float sxU = static_cast<float>(rng.range(560, 680));
+        float syU = static_cast<float>(rng.range(200, 290));
+        breaches.push_back({{sxU, syU}, {sxU, SRV_Y}, {SRV_X, SRV_Y}});
+        if (n >= 3) {
+            float sxL = static_cast<float>(rng.range(560, 680));
+            float syL = static_cast<float>(rng.range(430, 520));
+            breaches.push_back({{sxL, syL}, {sxL, SRV_Y}, {SRV_X, SRV_Y}});
+        }
+    }
+
     static const char* easyNames[]   = {"Sektor Alfa", "Sektor Beta"};
     static const char* normalNames[] = {"Sektor Gamma", "Sektor Delta"};
     static const char* hardNames[]   = {"Sektor Omega", "Sektor Sigma"};
@@ -110,7 +142,7 @@ LevelMap generate(int difficulty, unsigned seed) {
                      : (n == 4) ? hardNames[seed % 2]
                                 : normalNames[seed % 2];
 
-    return mk(nm, std::move(lanes));
+    return mk(nm, std::move(lanes), std::move(breaches));
 }
 
 } // namespace MapFactory

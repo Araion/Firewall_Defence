@@ -37,6 +37,7 @@ void Tower::finalizeSetup() {
         key.erase(towerPos);
 
     loadTowerArt(key);
+    m_shootSound = "shoot_" + key;
 }
 
 void Tower::loadTowerArt(const std::string& key) {

@@ -103,8 +103,8 @@ protected:
 
     // Dzwiek strzalu (throttlowany)
     std::string m_shootSound;
-    float m_shootSoundVol = 70.f;
-    float m_shootSoundGap = 0.f;
+    float m_shootSoundVol = 35.f;
+    float m_shootSoundGap = 0.2f;
 
     std::shared_ptr<sf::Texture> m_baseTex, m_headTex;
     sf::Sprite m_baseSprite, m_headSprite;

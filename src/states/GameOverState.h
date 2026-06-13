@@ -10,7 +10,7 @@
 // =============================================================
 class GameOverState : public GameState {
 public:
-    GameOverState(Game& game, int score, int wave, int difficulty = 1);
+    GameOverState(Game& game, bool victory, int score, int wave, int difficulty = 1);
 
     void handleEvent(const sf::Event& e) override;
     void update(float dt) override;
@@ -19,6 +19,7 @@ public:
 private:
     void saveScore();
 
+    bool m_victory;
     int  m_score;
     int  m_wave;
     int  m_difficulty;

@@ -27,6 +27,7 @@
 #include "managers/SaveManager.h"
 #include "managers/AudioManager.h"
 #include "util/Theme.h"
+#include "util/TextUtils.h"
 #include "util/MathUtils.h"
 #include "util/MapFactory.h"
 #include "util/Rng.h"
@@ -62,10 +63,11 @@ PlayState::PlayState(Game& game, bool tutorial) : GameState(game), m_tutorial(tu
     m_mapSeed = static_cast<unsigned>(Rng::range(1, 2000000000));
 
     if (m_tutorial) {
-        m_credits = 1000;
+        m_credits = 1500;
         m_serverHealth = m_serverMaxHealth = 100;
         m_breachChance = 0.f;
         m_systemUpgradeInterval = 0;
+        m_cpuCapacity = 200;
         for (bool& u : m_towerUnlocked) u = false;
     } else {
         for (bool& u : m_towerUnlocked) u = true;
@@ -81,7 +83,7 @@ PlayState::PlayState(Game& game, bool tutorial) : GameState(game), m_tutorial(tu
     initText(m_txtHealth, 20, Theme::NeonCyan);
     initText(m_txtScore, 20, Theme::TextMain);
     initText(m_txtHint, 15, Theme::TextDim);
-    m_txtHint.setString("LPM: sklep / pad / wieza   |   1-7: wybor wiezy   |   SPACE: pauza   |   ESC: panel / menu");
+    m_txtHint.setString("1-7: wybor wiezy   |   SPACE: pauza   |   ESC: panel / menu");
 
     m_btnUpgrade.setup(font, "ULEPSZ", {PANEL_X + 10.f, PANEL_Y + 184.f}, {PANEL_W - 20.f, 32.f}, 18);
     m_btnUpgrade.setColors(Theme::PanelSolid, Theme::NeonGreen, Theme::TextMain, Theme::NeonGreen);
@@ -118,7 +120,7 @@ void PlayState::buildBoardFromSeed(unsigned seed) {
     m_breaches.clear();
     m_server = nullptr;
 
-    LevelMap map = m_tutorial ? MapFactory::generate(0, 12345)
+    LevelMap map = m_tutorial ? MapFactory::tutorialMap()
                               : MapFactory::generate(m_difficultyLevel, seed);
 
     for (const auto& lane : map.lanes)
@@ -126,13 +128,12 @@ void PlayState::buildBoardFromSeed(unsigned seed) {
     for (auto& p : m_paths) m_pathPtrs.push_back(p.get());
 
     // Wypelnianie tuneli puste, otworza sie losowo podczas gry z istniejacych metod
-    /*
     for (const auto& bl : map.breachLanes) {
         BreachLane lane;
         lane.path = std::make_unique<Path>(bl);
         m_breaches.push_back(std::move(lane));
     }
-    */
+
 
     auto server = std::make_unique<ServerCore>(res, map.serverPos);
     m_server = server.get();
@@ -403,7 +404,7 @@ void PlayState::update(float dt) {
         bool won = m_waves->victory();
         if (lost || won) {
             int finalScore = m_score + std::max(0, m_serverHealth) * 100 + m_credits;
-            m_game.changeState(std::make_unique<GameOverState>(m_game, finalScore, m_wave, m_difficultyLevel));
+            m_game.changeState(std::make_unique<GameOverState>(m_game, won, finalScore, m_wave, m_difficultyLevel));
         }
     }
 }
@@ -645,7 +646,7 @@ bool PlayState::placeTowerFromSave(const std::string& type, int level, sf::Vecto
     return true;
 }
 
-void PlayState::addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance) {
+void PlayState::addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance, int gen) {
     if (m_pathPtrs.empty()) return;
     int idx = std::max(0, std::min(pathIndex, static_cast<int>(m_pathPtrs.size()) - 1));
     const Path* path = m_pathPtrs[idx];

@@ -77,7 +77,7 @@ public:
 
     // --- Zapis / wczytanie stanu (SaveManager) ---
     struct TowerSave { std::string type; int level; float x, y; };
-    struct EnemySave { std::string type; float hp; int pathIndex; float distance; };
+    struct EnemySave { std::string type; float hp; int pathIndex; float distance; int gen = 0; };
     struct BreachSave { int index; int wavesLeft; };
     std::vector<TowerSave> snapshotTowers() const;
     std::vector<EnemySave> snapshotEnemies() const;
@@ -98,7 +98,7 @@ public:
 
     void buildBoard(unsigned seed, int difficulty); // dopasowane do M3
     bool placeTowerFromSave(const std::string& type, int level, sf::Vector2f pos);
-    void addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance);
+    void addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance, int gen = 0);
     void applyLoadedMeta(int waveNum, int credits, int serverHp, float heat, int scoreVal);
     void applyLoadedMeta(int credits, int serverHp, int scoreVal); // przeciazenie dla starego SaveManager
     void finishLoad();

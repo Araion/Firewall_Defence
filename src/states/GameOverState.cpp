@@ -7,16 +7,16 @@
 #include "util/TextUtils.h"
 #include "util/Theme.h"
 
-GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
-    : GameState(game), m_score(score), m_wave(wave), m_difficulty(difficulty) {
+GameOverState::GameOverState(Game& game, bool victory, int score, int wave, int difficulty)
+    : GameState(game), m_victory(victory), m_score(score), m_wave(wave), m_difficulty(difficulty) {
     const sf::Font& font = m_game.getResources().getFont();
 
     // Ekran konca gry
     m_title.setFont(font);
-    m_title.setString("KONIEC GRY!");
+    m_title.setString(m_victory ? "WYGRANA!" : "KONIEC GRY!");
     m_title.setCharacterSize(64);
     m_title.setStyle(sf::Text::Bold);
-    m_title.setFillColor(Theme::Danger);
+    m_title.setFillColor(m_victory ? Theme::NeonGreen : Theme::Danger);
     sf::FloatRect tb = m_title.getLocalBounds();
     m_title.setOrigin(tb.left + tb.width / 2.f, tb.top + tb.height / 2.f);
     m_title.setPosition(640.f, 150.f);
@@ -34,18 +34,20 @@ GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
     m_prompt.setString("Wpisz nick i zapisz wynik:");
     m_prompt.setCharacterSize(20);
     m_prompt.setFillColor(Theme::TextDim);
-    m_prompt.setPosition(440.f, 290.f);
+    sf::FloatRect pb = m_prompt.getLocalBounds();
+    m_prompt.setOrigin(pb.left + pb.width / 2.f, pb.top + pb.height / 2.f);
+    m_prompt.setPosition(640.f, 305.f);
 
     m_nickText.setFont(font);
     m_nickText.setCharacterSize(28);
     m_nickText.setFillColor(Theme::NeonCyan);
-    m_nickText.setPosition(452.f, 322.f);
+    m_nickText.setPosition(472.f, 322.f);
 
     m_savedText.setFont(font);
     m_savedText.setString("Wynik zapisany!");
     m_savedText.setCharacterSize(20);
     m_savedText.setFillColor(Theme::NeonGreen);
-    m_savedText.setPosition(452.f, 370.f);
+    m_savedText.setPosition(640., 382.f);
 
     m_btnSave.setup(font, "ZAPISZ", {440.f, 400.f}, {400.f, 48.f}, 22);
     m_btnSave.setColors(Theme::PanelSolid, Theme::NeonGreen, Theme::TextMain, Theme::NeonGreen);
@@ -54,7 +56,7 @@ GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
     m_btnMenu.setup(font, utf8("MENU GŁÓWNE"), {440.f, 524.f}, {400.f, 48.f}, 22);
     m_btnMenu.setColors(Theme::PanelSolid, Theme::Warn, Theme::TextMain, Theme::Warn);
 
-    m_game.getAudio().play("game_over");
+    m_game.getAudio().play(m_victory ? "victory" : "game_over");
 }
 
 void GameOverState::saveScore() {
@@ -73,7 +75,7 @@ void GameOverState::handleEvent(const sf::Event& e) {
         if (u == 8) {                              // backspace
             if (!m_nick.empty()) m_nick.pop_back();
         } else if (u >= 32 && u < 127) {           // drukowalne ASCII
-            if (m_nick.size() < 16) m_nick += static_cast<char>(u);
+            if (m_nick.size() < 22) m_nick += static_cast<char>(u);
         }
         return;
     }
@@ -116,7 +118,7 @@ void GameOverState::draw(sf::RenderWindow& window) {
     window.draw(m_prompt);
 
     sf::RectangleShape box({360.f, 44.f});
-    box.setPosition(448.f, 318.f);
+    box.setPosition(460.f, 318.f);
     box.setFillColor(Theme::PanelSolid);
     box.setOutlineThickness(2.f);
     box.setOutlineColor(Theme::NeonCyan);

@@ -55,7 +55,7 @@ bool ResourceManager::ensureSystemFont() {
     return false;
 }
 
-const sf::Font& ResourceManager::getFont(const std::string&) {
+const sf::Font& ResourceManager::getFont() {
     ensureSystemFont();
     if (m_systemFont) return *m_systemFont;
 

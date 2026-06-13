@@ -13,6 +13,7 @@ DataCleanerTower::DataCleanerTower(PlayState& state, ResourceManager& res, Confi
     m_name = meta.name;
     m_color = meta.color;
     m_cost = cfg.getInt(meta.configCostKey, meta.defaultCost);
+    m_cpuCost = meta.cpuCost;
 
     m_baseDamage = 0.f;
     m_baseRange = 130.f;

@@ -12,6 +12,7 @@ EMPTower::EMPTower(PlayState& state, ResourceManager& res, ConfigManager& cfg)
     m_name = meta.name;
     m_color = meta.color;
     m_cost = cfg.getInt(meta.configCostKey, meta.defaultCost);
+    m_cpuCost = meta.cpuCost;
 
     // Statystyki bazowe wiezy
     m_baseDamage = 25.f;

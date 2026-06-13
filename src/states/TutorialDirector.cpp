@@ -23,7 +23,7 @@ static constexpr float kPostBuildPause = 1.0f;
 
 // Indeksy typow wiez (TowerType): 0 Antivirus,1 Firewall,2 Laser,3 DataCleaner,4 Overclock,5 Corruption,6 EMP
 TutorialDirector::TutorialDirector(PlayState& ps) : m_ps(ps) {
-    const sf::Font& font = m_ps.resources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_ps.resources().getFont();
     m_btnNext.setup(font, "DALEJ >", {P_X + P_W / 2.f - 100.f, P_Y + P_H - 64.f}, {200.f, 48.f}, 22);
     m_btnNext.setColors(Theme::PanelSolid, Theme::NeonGreen, Theme::TextMain, Theme::NeonGreen);
 
@@ -100,7 +100,7 @@ void TutorialDirector::buildSteps() {
     build(1, 1, "FIREWALL (slot 2)",
           "FIREWALL nie strzela - roztacza pole, które SPOWALNIA wrogów\n"
           "w zasięgu. Postaw go przy ścieżce.");
-    combat(2, 2, "WRÓG: WORM",
+    combat(2, 1, "WRÓG: WORM",
            "WORM jest szybki i po śmierci DZIELI się na 2 mini-wormy,\n"
            "które dzielą się na kolejne 2 mniejsze.");
 
@@ -168,7 +168,7 @@ void TutorialDirector::buildSteps() {
     combat(4, 1, "BOSS MALWARE",
            "BOSS ma PANCERZ (mniej obrażeń), PRZYZYWA wrogów, a poniżej\n"
            "50% HP jest ODPORNY na spowolnienie. Możesz teraz stawiać\n"
-           "wieże GDZIEKOLWIEK - pokonaj go!");
+           "wieże GDZIEKOLWIEK - pokonaj go!", false, false);
     m_steps.back().freeBuild = true; // w walce z bossem gracz buduje swobodnie
 
     info("SAMOUCZEK UKOŃCZONY!",
@@ -301,8 +301,7 @@ void TutorialDirector::draw(sf::RenderWindow& window) {
     // wielkim, zatrzymujacym gre panelu ponizej.
     if (!m_panelOpen) return;
 
-    const sf::Font& titleF = m_ps.resources().getFont("assets/fonts/title.ttf");
-    const sf::Font& bodyF = m_ps.resources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_ps.resources().getFont();
 
     // Pelny, blokujacy panel z opisem (wieza lub wrog).
     {
@@ -319,7 +318,7 @@ void TutorialDirector::draw(sf::RenderWindow& window) {
 
         const Step& s = m_steps[m_index];
         // Teksty samouczka zawieraja polskie znaki zapisane jako bajty UTF-8
-        sf::Text title(sf::String::fromUtf8(s.title.begin(), s.title.end()), titleF, 32);
+        sf::Text title(sf::String::fromUtf8(s.title.begin(), s.title.end()), font, 32);
         title.setStyle(sf::Text::Bold);
         title.setFillColor(Theme::NeonCyan);
         sf::FloatRect tb = title.getLocalBounds();
@@ -327,14 +326,14 @@ void TutorialDirector::draw(sf::RenderWindow& window) {
         title.setPosition(P_X + P_W / 2.f, P_Y + 26.f);
         window.draw(title);
 
-        sf::Text body(sf::String::fromUtf8(s.text.begin(), s.text.end()), bodyF, 21);
+        sf::Text body(sf::String::fromUtf8(s.text.begin(), s.text.end()), font, 21);
         body.setFillColor(Theme::TextMain);
         body.setLineSpacing(1.25f);
         body.setPosition(P_X + 40.f, P_Y + 104.f);
         window.draw(body);
 
         std::string prog = "Etap " + std::to_string(m_index + 1) + " / " + std::to_string(m_steps.size());
-        sf::Text pr(prog, bodyF, 16);
+        sf::Text pr(prog, font, 16);
         pr.setFillColor(Theme::TextDim);
         pr.setPosition(P_X + 40.f, P_Y + P_H - 54.f);
         window.draw(pr);

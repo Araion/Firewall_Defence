@@ -12,9 +12,11 @@ bool SaveManager::save(PlayState& state, const std::string& relativePath) {
 
     // Sekcja meta - liczby potrzebne do odtworzenia rozgrywki
     out << "[meta]\n";
+    out << "wave=" << state.wave() << "\n";
     out << "credits=" << state.credits() << "\n";
     out << "score=" << state.score() << "\n";
     out << "serverHealth=" << state.serverHealth() << "\n";
+    out << "heat=" << state.heat() << "\n";
     out << "mapSeed=" << state.mapSeed() << "\n";
     out << "difficulty=" << state.difficultyLevel() << "\n";
 
@@ -26,7 +28,7 @@ bool SaveManager::save(PlayState& state, const std::string& relativePath) {
     // Wrogowie: typ hp pathIndex distance
     out << "[enemies]\n";
     for (const auto& e : state.snapshotEnemies())
-        out << e.type << " " << e.hp << " " << e.pathIndex << " " << e.distance << "\n";
+        out << e.type << " " << e.hp << " " << e.pathIndex << " " << e.distance << " " << e.gen << "\n";
 
     return true;
 }
@@ -35,11 +37,12 @@ bool SaveManager::load(PlayState& state, const std::string& relativePath) {
     std::ifstream in(Paths::resolve(relativePath));
     if (!in.is_open()) return false;
 
-    int credits = 300, score = 0, serverHp = 20, difficulty = 1;
+    int wave = 0, credits = 300, score = 0, serverHp = 20, difficulty = 1;
     unsigned mapSeed = 0;
+    float heat = 0.f;
 
     struct TowerRec { std::string type; int level; float x, y; };
-    struct EnemyRec { std::string type; float hp; int pathIndex; float distance; };
+    struct EnemyRec { std::string type; float hp; int pathIndex; float distance; int gen = 0; };
     std::vector<TowerRec> towers;
     std::vector<EnemyRec> enemies;
 
@@ -54,9 +57,11 @@ bool SaveManager::load(PlayState& state, const std::string& relativePath) {
             if (eq == std::string::npos) continue;
             std::string key = line.substr(0, eq), val = line.substr(eq + 1);
             try {
-                if (key == "credits") credits = std::stoi(val);
+                if (key == "wave") wave = std::stoi(val);
+                else if (key == "credits") credits = std::stoi(val);
                 else if (key == "score") score = std::stoi(val);
                 else if (key == "serverHealth") serverHp = std::stoi(val);
+                else if (key == "heat") heat = std::stof(val);
                 else if (key == "mapSeed") mapSeed = static_cast<unsigned>(std::stoul(val));
                 else if (key == "difficulty") difficulty = std::stoi(val);
             } catch (...) { /* uszkodzone linie ignorujemy */ }
@@ -67,7 +72,7 @@ bool SaveManager::load(PlayState& state, const std::string& relativePath) {
         } else if (section == "[enemies]") {
             std::stringstream ss(line);
             EnemyRec r;
-            if (ss >> r.type >> r.hp >> r.pathIndex >> r.distance) enemies.push_back(r);
+            if (ss >> r.type >> r.hp >> r.pathIndex >> r.distance) { ss >> r.gen; enemies.push_back(r); }
         }
     }
 
@@ -75,9 +80,9 @@ bool SaveManager::load(PlayState& state, const std::string& relativePath) {
 
     // Najpierw odbuduj plansze z zapisanego ziarna (te same sciezki), potem meta i obiekty
     state.buildBoard(mapSeed, difficulty);
-    state.applyLoadedMeta(credits, serverHp, score);
+    state.applyLoadedMeta(wave, credits, serverHp, heat, score);
     for (const auto& t : towers) state.placeTowerFromSave(t.type, t.level, {t.x, t.y});
-    for (const auto& e : enemies) state.addEnemyFromSave(e.type, e.hp, e.pathIndex, e.distance);
+    for (const auto& e : enemies) state.addEnemyFromSave(e.type, e.hp, e.pathIndex, e.distance, e.gen);
     state.finishLoad();
     return true;
 }

@@ -16,6 +16,7 @@ FirewallTower::FirewallTower(PlayState& state, ResourceManager& res, ConfigManag
     m_name = meta.name;
     m_color = meta.color;
     m_cost = cfg.getInt(meta.configCostKey, meta.defaultCost);
+    m_cpuCost = meta.cpuCost;
 
     // Statystyki bazowe wiezy
     m_baseDamage = 6.f;
