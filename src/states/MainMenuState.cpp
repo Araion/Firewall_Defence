@@ -9,7 +9,7 @@
 #include <cmath>
 
 // Indeksy przyciskow menu
-enum MenuButton { BtnNewGame = 0, BtnLoad, BtnScores, BtnSettings, BtnExit, BtnCount };
+enum MenuButton { BtnNewGame = 0, BtnTutorial, BtnLoad, BtnScores, BtnSettings, BtnExit, BtnCount };
 
 MainMenuState::MainMenuState(Game& game) : GameState(game) {
     auto& res = m_game.getResources();
@@ -51,10 +51,10 @@ void MainMenuState::buildButtons() {
     auto& res = m_game.getResources();
     const sf::Font& font = res.getFont();
 
-    const char* labels[BtnCount] = { "NOWA GRA", "WCZYTAJ GRE", "TABLICA WYNIKOW", "USTAWIENIA", "WYJSCIE" };
+    const char* labels[BtnCount] = { "NOWA GRA", "SAMOUCZEK", "WCZYTAJ GRE", "TABLICA WYNIKOW", "USTAWIENIA", "WYJSCIE" };
 
     const float w = 340.f, h = 50.f, gap = 13.f;
-    const float startY = 285.f;
+    const float startY = 272.f;
     const float x = 640.f - w / 2.f;
 
     m_buttons.clear();
@@ -72,6 +72,9 @@ void MainMenuState::onButtonClicked(int index) {
     switch (index) {
         case BtnNewGame:
             m_game.changeState(std::make_unique<PlayState>(m_game));
+            break;
+        case BtnTutorial:
+            m_game.changeState(std::make_unique<PlayState>(m_game, true));
             break;
         case BtnLoad: {
             // Tworzymy rozgrywke i probujemy wczytac zapis - gdy sie nie uda zostajemy w menu
