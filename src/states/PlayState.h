@@ -14,30 +14,36 @@ class Enemy;
 class ServerCore;
 class Tower;
 class WaveManager;
+class TutorialDirector;
 
 // =============================================================
-// PlayState - Główny stan rozgrywki.
-// Obsługuje WaveManager (fale), ekonomię, limit CPU, temperaturę
-// (przegrzanie), ulepszenia systemowe (Draft) oraz aktywne moce.
+//  PlayState - wlasciwa rozgrywka. Trzyma JEDEN wspolny kontener
+//  std::vector<std::unique_ptr<GameObject>> ze wszystkimi obiektami
+//  (wieze, wrogowie, pociski, efekty, build pady, serwer). Petla
+//  klatki aktualizuje je polimorficznie, rozwiazuje kolizje
+//  (CollisionManager), usuwa martwe i rysuje plansze, HUD, sklep
+//  oraz panel wiezy. Obejmuje ekonomie i limit CPU.
 // =============================================================
 class PlayState : public GameState {
 public:
-    explicit PlayState(Game& game);
-    ~PlayState() override;
+    explicit PlayState(Game& game, bool tutorial = false);
+    ~PlayState() override; // zdefiniowany w .cpp (WaveManager jest tam kompletny)
+
+    bool isTutorial() const { return m_tutorial; }
 
     void handleEvent(const sf::Event& e) override;
     void update(float dt) override;
     void draw(sf::RenderWindow& window) override;
 
-    // --- API dla obiektów gry ---
-    void spawn(std::unique_ptr<GameObject> obj);
+    // --- API dla obiektow gry ---
+    void spawn(std::unique_ptr<GameObject> obj);          // dodanie obiektu (odlozone)
     void spawnExplosion(sf::Vector2f pos, sf::Color color, float scale = 1.f);
     const std::vector<const Path*>& paths() const { return m_pathPtrs; }
-    const std::vector<Enemy*>& enemies() const { return m_frameEnemies; }
-    const std::vector<Tower*>& towers() const { return m_frameTowers; }
+    const std::vector<Enemy*>& enemies() const { return m_frameEnemies; } // cache zywych wrogow
+    const std::vector<Tower*>& towers() const { return m_frameTowers; }   // cache zywych wiez
     class ResourceManager& resources();
 
-    // --- Ekonomia i Komunikaty ---
+    // --- Ekonomia ---
     void addCredits(int c) { m_credits += c; }
     bool spendCredits(int c);
     int  credits() const { return m_credits; }
@@ -45,27 +51,38 @@ public:
     void showMessage(const std::string& msg, sf::Color color);
     void playSfx(const std::string& name, float volume = 100.f);
     void playMusic(const std::string& name);
-    bool enemyAbilities() const { return m_enemyAbilities; }
+    bool enemyAbilities() const { return m_enemyAbilities; } // czy zdolnosci specjalne wlaczone
 
+    // --- API dla samouczka (TutorialDirector) ---
+    void unlockTower(int idx);                 // odblokowuje typ wiezy w sklepie
+    void scriptOpenBreach() { openBreach(); }  // recznie otwiera tunel breach
+    sf::Vector2f mousePos() const { return m_mouse; }
+    // Czy w danym punkcie wolno postawic wieze (poza sciezka, poza innymi
+    // wiezami, w polu gry). Uzywane przez budowanie i samouczek.
     bool canPlaceAt(sf::Vector2f pos) const;
-    Tower* towerAt(sf::Vector2f pos) const;
+    // Czy w poblizu punktu stoi juz jakas wieza (samouczek: zaliczenie kroku).
+    bool towerNear(sf::Vector2f pos, float radius) const;
+    // Bramka samouczka: ogranicza akcje gracza. target = wskazane miejsce budowy
+    // (gdy hasTarget), radius = dozwolony promien wokol niego.
+    void setTutorialGate(bool buildLocked, int onlySlot,
+                         sf::Vector2f target = {}, bool hasTarget = false, float radius = 70.f);
 
-    // --- Modyfikatory (Draft) ---
-    bool  heuristics() const { return m_heuristics; }
-    float bountyMult() const { return m_bountyMult; }
-    float heatReduction() const { return m_heatReduction; }
-    float slowStrength() const { return m_slowStrength; }
+    Tower* towerAt(sf::Vector2f pos) const;       // wieza pod kursorem (do wyboru)
+
+    // --- Modyfikatory z ulepszen systemowych (System Update) ---
+    bool  heuristics() const { return m_heuristics; }       // wykrywanie zaszyfrowanych
+    float bountyMult() const { return m_bountyMult; }       // mnoznik kredytow za wrogow
+    float heatReduction() const { return m_heatReduction; } // mnoznik generowanego heatu
+    float slowStrength() const { return m_slowStrength; }   // sila spowolnienia firewalla
 
     // --- Zapis / wczytanie stanu (SaveManager) ---
     struct TowerSave { std::string type; int level; float x, y; };
     struct EnemySave { std::string type; float hp; int pathIndex; float distance; };
     struct BreachSave { int index; int wavesLeft; };
-
     std::vector<TowerSave> snapshotTowers() const;
     std::vector<EnemySave> snapshotEnemies() const;
     std::vector<BreachSave> snapshotBreaches() const;
     void activateBreachFromSave(int index, int wavesLeft);
-
     int   wave() const { return m_wave; }
     int   serverHealth() const { return m_serverHealth; }
     float heat() const { return m_heat; }
@@ -76,21 +93,20 @@ public:
     unsigned mapSeed() const { return m_mapSeed; }
     int   difficultyLevel() const { return m_difficultyLevel; }
 
-    // SaveManager: buildBoard
-    void buildBoard(unsigned seed, int difficulty);
+    void  applyLoadedUpgrades(float range, float bounty, float heat, bool heur,
+                             float slow, int cpuCap);
+
+    void buildBoard(unsigned seed, int difficulty); // dopasowane do M3
     bool placeTowerFromSave(const std::string& type, int level, sf::Vector2f pos);
     void addEnemyFromSave(const std::string& type, float hp, int pathIndex, float distance);
-    void applyLoadedUpgrades(float range, float bounty, float heat, bool heur, float slow, int cpuCap);
-
-    // Przeciazenie dla SaveManagera
     void applyLoadedMeta(int waveNum, int credits, int serverHp, float heat, int scoreVal);
-    void applyLoadedMeta(int credits, int serverHp, int scoreVal);
+    void applyLoadedMeta(int credits, int serverHp, int scoreVal); // przeciazenie dla starego SaveManager
     void finishLoad();
 
     bool saveGame();
     bool loadGame();
 
-    // --- Wektory Ataku (Breach) ---
+    // Dla WaveManager
     bool anyBreachActive() const;
     bool isBreachPath(const Path* p) const;
     bool breachWormOnly() const { return m_breachWormOnly; }
@@ -139,6 +155,7 @@ private:
     void drawMessage(sf::RenderWindow& window);
     void drawControls(sf::RenderWindow& window);
     void drawPauseOverlay(sf::RenderWindow& window);
+    void drawTutorialHints(sf::RenderWindow& window);
     void drawBuildPreview(sf::RenderWindow& window);
     static void drawThickLine(sf::RenderWindow& window, sf::Vector2f a, sf::Vector2f b,
                               float thickness, sf::Color color);
@@ -149,13 +166,13 @@ private:
     std::vector<const Path*> m_pathPtrs;
     std::vector<std::unique_ptr<GameObject>> m_objects;
     std::vector<std::unique_ptr<GameObject>> m_pendingSpawns;
-
     ServerCore* m_server = nullptr;
     std::vector<Enemy*> m_frameEnemies;
     std::vector<Tower*> m_frameTowers;
 
     CollisionManager m_collision;
     std::unique_ptr<WaveManager> m_waves;
+    std::unique_ptr<TutorialDirector> m_tutorialDirector;
 
     int m_serverHealth = 20;
     int m_serverMaxHealth = 20;
@@ -192,6 +209,7 @@ private:
     bool  m_breachWormOnly = false;
     float m_breachChance = 0.25f;
 
+    bool     m_tutorial = false;
     unsigned m_mapSeed = 0;
     int      m_difficultyLevel = 1;
 
@@ -211,6 +229,11 @@ private:
     int  m_buildSelection = -1;
     std::unique_ptr<Tower> m_preview;
 
+    bool m_tutBuildLocked = false;
+    int  m_tutOnlySlot = -1;
+    bool m_tutHasTarget = false;
+    sf::Vector2f m_tutTarget;
+    float m_tutTargetRadius = 70.f;
     Tower* m_selectedTower = nullptr;
     sf::Vector2f m_mouse;
 
@@ -221,6 +244,7 @@ private:
     bool  m_paused = false;
     float m_speed = 1.f;
     float m_uiTime = 0.f;
+    float m_devTutTimer = 0.f;
 
     sf::Text m_txtWave, m_txtCredits, m_txtHealth, m_txtHint, m_txtScore;
     Button m_btnUpgrade, m_btnSell;

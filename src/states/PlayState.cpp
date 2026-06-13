@@ -2,6 +2,7 @@
 #include "core/Game.h"
 #include "states/MainMenuState.h"
 #include "states/GameOverState.h"
+#include "states/TutorialDirector.h"
 #include "entities/ServerCore.h"
 #include "entities/SlowEffect.h"
 #include "entities/Enemy.h"
@@ -42,7 +43,7 @@ static constexpr float SHOP_Y = 720.f - SHOP_H;
 // Geometria panelu wiezy
 static constexpr float PANEL_X = 994.f, PANEL_Y = 70.f, PANEL_W = 272.f, PANEL_H = 264.f;
 
-PlayState::PlayState(Game& game) : GameState(game) {
+PlayState::PlayState(Game& game, bool tutorial) : GameState(game), m_tutorial(tutorial) {
     auto& cfg = m_game.getConfig();
     m_credits = cfg.getInt("startingCredits", 300);
     m_serverHealth = m_serverMaxHealth = cfg.getInt("serverHealth", 20);
@@ -60,10 +61,18 @@ PlayState::PlayState(Game& game) : GameState(game) {
     m_difficultyLevel = (diff <= 0.9f) ? 0 : (diff >= 1.15f ? 2 : 1);
     m_mapSeed = static_cast<unsigned>(Rng::range(1, 2000000000));
 
-    for (bool& u : m_towerUnlocked) u = true;
+    if (m_tutorial) {
+        m_credits = 1000;
+        m_serverHealth = m_serverMaxHealth = 100;
+        m_breachChance = 0.f;
+        m_systemUpgradeInterval = 0;
+        for (bool& u : m_towerUnlocked) u = false;
+    } else {
+        for (bool& u : m_towerUnlocked) u = true;
+    }
 
     auto& res = m_game.getResources();
-    const sf::Font& font = res.getFont("assets/fonts/body.ttf");
+    const sf::Font& font = res.getFont();
     auto initText = [&](sf::Text& t, unsigned size, sf::Color c) {
         t.setFont(font); t.setCharacterSize(size); t.setFillColor(c);
     };
@@ -91,6 +100,8 @@ PlayState::PlayState(Game& game) : GameState(game) {
     m_waves = std::make_unique<WaveManager>(*this, cfg, m_pathPtrs);
     m_totalWaves = m_waves->totalWaves();
 
+    if (m_tutorial) m_tutorialDirector = std::make_unique<TutorialDirector>(*this);
+
     initAbilities();
     playMusic("music_game");
 }
@@ -107,11 +118,21 @@ void PlayState::buildBoardFromSeed(unsigned seed) {
     m_breaches.clear();
     m_server = nullptr;
 
-    LevelMap map = MapFactory::generate(m_difficultyLevel, seed);
+    LevelMap map = m_tutorial ? MapFactory::generate(0, 12345)
+                              : MapFactory::generate(m_difficultyLevel, seed);
 
     for (const auto& lane : map.lanes)
         m_paths.push_back(std::make_unique<Path>(lane));
     for (auto& p : m_paths) m_pathPtrs.push_back(p.get());
+
+    // Wypelnianie tuneli puste, otworza sie losowo podczas gry z istniejacych metod
+    /*
+    for (const auto& bl : map.breachLanes) {
+        BreachLane lane;
+        lane.path = std::make_unique<Path>(bl);
+        m_breaches.push_back(std::move(lane));
+    }
+    */
 
     auto server = std::make_unique<ServerCore>(res, map.serverPos);
     m_server = server.get();
@@ -150,6 +171,15 @@ bool PlayState::canPlaceAt(sf::Vector2f pos) const {
     return true;
 }
 
+bool PlayState::towerNear(sf::Vector2f pos, float radius) const {
+    for (const auto& o : m_objects) {
+        if (!o->isAlive()) continue;
+        if (const Tower* t = dynamic_cast<const Tower*>(o.get()))
+            if (MathUtils::distance(pos, t->getPosition()) <= radius) return true;
+    }
+    return false;
+}
+
 Tower* PlayState::towerAt(sf::Vector2f pos) const {
     for (const auto& o : m_objects) {
         if (!o->isAlive()) continue;
@@ -171,7 +201,7 @@ void PlayState::initAbilities() {
 
     m_abilities.push_back(coolant);
     m_abilities.push_back(surge);
-    m_abilitiesEnabled = true;
+    m_abilitiesEnabled = !m_tutorial;
 }
 
 int PlayState::abilityAt(sf::Vector2f pos) const {
@@ -296,7 +326,7 @@ void PlayState::handleDeaths() {
             } else {
                 m_credits += static_cast<int>(e->getReward() * m_bountyMult);
                 m_score += e->getPoints();
-                spawnExplosion(e->getPosition(), e->getBodyColor());
+                spawnExplosion(e->getPosition(), e->getBodyColor(), 1.0f);
                 m_game.getAudio().play("explosion", 55.f);
                 e->onDeath(*this);
             }
@@ -328,18 +358,30 @@ void PlayState::update(float dt) {
 
     if (m_paused || m_draftActive) return;
 
+    if (m_tutorial && m_tutorialDirector && m_tutorialDirector->panelOpen()) {
+        m_tutorialDirector->update(dt);
+        return;
+    }
+
     float sdt = dt * m_speed;
 
     flushPending();
     rebuildCaches();
 
-    m_waves->update(sdt);
-    int newWave = m_waves->currentWave();
-    if (newWave != m_wave) onWaveChanged(newWave);
-    m_wave = newWave;
-
-    int completed = m_waves->takeCompletedWave();
-    if (completed > 0) maybeTriggerDraft(completed);
+    if (m_tutorial && m_tutorialDirector) {
+        m_tutorialDirector->update(sdt);
+        if (m_tutorialDirector->finished()) {
+            m_game.changeState(std::make_unique<MainMenuState>(m_game));
+            return;
+        }
+    } else {
+        m_waves->update(sdt);
+        int newWave = m_waves->currentWave();
+        if (newWave != m_wave) onWaveChanged(newWave);
+        m_wave = newWave;
+        int completed = m_waves->takeCompletedWave();
+        if (completed > 0) maybeTriggerDraft(completed);
+    }
 
     updateHover();
 
@@ -356,11 +398,13 @@ void PlayState::update(float dt) {
 
     if (m_server) m_server->setHealth(m_serverHealth, m_serverMaxHealth);
 
-    bool lost = (m_serverHealth <= 0) || (m_heat >= 100.f);
-    bool won = m_waves->victory();
-    if (lost || won) {
-        int finalScore = m_score + std::max(0, m_serverHealth) * 100 + m_credits;
-        m_game.changeState(std::make_unique<GameOverState>(m_game, finalScore, m_wave, m_difficultyLevel));
+    if (!m_tutorial) {
+        bool lost = (m_serverHealth <= 0) || (m_heat >= 100.f);
+        bool won = m_waves->victory();
+        if (lost || won) {
+            int finalScore = m_score + std::max(0, m_serverHealth) * 100 + m_credits;
+            m_game.changeState(std::make_unique<GameOverState>(m_game, finalScore, m_wave, m_difficultyLevel));
+        }
     }
 }
 
@@ -369,6 +413,15 @@ static sf::FloatRect draftCardRect(int i) {
 }
 
 void PlayState::handleEvent(const sf::Event& e) {
+    if (m_tutorial && m_tutorialDirector && m_tutorialDirector->panelOpen()) {
+        if (e.type == sf::Event::KeyPressed && e.key.code == sf::Keyboard::Escape) {
+            m_game.changeState(std::make_unique<MainMenuState>(m_game));
+            return;
+        }
+        m_tutorialDirector->handleEvent(e);
+        return;
+    }
+
     if (m_draftActive) {
         if (e.type == sf::Event::MouseButtonPressed && e.mouseButton.button == sf::Mouse::Left) {
             sf::Vector2f m(static_cast<float>(e.mouseButton.x), static_cast<float>(e.mouseButton.y));
@@ -405,6 +458,7 @@ void PlayState::handleEvent(const sf::Event& e) {
             idx = e.key.code - sf::Keyboard::Numpad1;
 
         if (idx >= 0 && idx < static_cast<int>(TowerType::Count)) {
+            if (m_tutorial && (m_tutBuildLocked || (m_tutOnlySlot >= 0 && idx != m_tutOnlySlot))) return;
             if (m_towerUnlocked[idx]) { deselectAll(); setBuildSelection(idx); }
             else { showMessage("Ta wieza jest zablokowana", Theme::Warn); playSfx("denied", 60.f); }
         }
@@ -425,6 +479,7 @@ void PlayState::onLeftClick(sf::Vector2f mouse) {
         for (int i = 0; i < static_cast<int>(TowerType::Count); ++i) {
             if (shopSlotRect(i).contains(mouse)) {
                 if (!m_towerUnlocked[i]) { showMessage("Ta wieza jest zablokowana", Theme::Warn); playSfx("denied", 60.f); return; }
+                if (m_tutorial && (m_tutBuildLocked || (m_tutOnlySlot >= 0 && i != m_tutOnlySlot))) return;
                 deselectAll();
                 setBuildSelection((m_buildSelection == i) ? -1 : i);
                 return;
@@ -452,6 +507,10 @@ void PlayState::onLeftClick(sf::Vector2f mouse) {
     setBuildSelection(-1);
 }
 
+void PlayState::unlockTower(int idx) {
+    if (idx >= 0 && idx < static_cast<int>(TowerType::Count)) m_towerUnlocked[idx] = true;
+}
+
 void PlayState::setBuildSelection(int idx) {
     m_buildSelection = idx;
     if (idx >= 0 && idx < static_cast<int>(TowerType::Count)) {
@@ -460,6 +519,15 @@ void PlayState::setBuildSelection(int idx) {
     } else {
         m_preview.reset();
     }
+}
+
+void PlayState::setTutorialGate(bool buildLocked, int onlySlot,
+                                sf::Vector2f target, bool hasTarget, float radius) {
+    m_tutBuildLocked = buildLocked;
+    m_tutOnlySlot = onlySlot;
+    m_tutTarget = target;
+    m_tutHasTarget = hasTarget;
+    m_tutTargetRadius = radius;
 }
 
 void PlayState::selectTower(Tower* t) {
@@ -488,7 +556,6 @@ std::unique_ptr<Tower> PlayState::createTower(TowerType type) {
     case TowerType::EMP:         t = std::make_unique<EMPTower>(*this, res, cfg); break;
     default: return nullptr;
     }
-    // Jesli tower ma setGlobalRangeMult, to tutaj je ustawiamy.
     if (t) t->setGlobalRangeMult(m_globalRangeMult);
     return t;
 }
@@ -617,7 +684,6 @@ void PlayState::applyLoadedMeta(int waveNum, int credits, int serverHp, float he
     if (m_server) m_server->setHealth(m_serverHealth, m_serverMaxHealth);
 }
 
-// Przeciazenie dla starego SaveManager
 void PlayState::applyLoadedMeta(int credits, int serverHp, int scoreVal) {
     applyLoadedMeta(0, credits, serverHp, 0.f, scoreVal);
 }
@@ -750,8 +816,8 @@ void PlayState::drawDraft(sf::RenderWindow& window) {
     dim.setFillColor(sf::Color(0, 0, 0, 180));
     window.draw(dim);
 
-    const sf::Font& title = m_game.getResources().getFont("assets/fonts/title.ttf");
-    const sf::Font& body = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& title = m_game.getResources().getFont();
+    const sf::Font& body = m_game.getResources().getFont();
 
     sf::Text head("SYSTEM UPDATE", title, 52);
     head.setStyle(sf::Text::Bold);
@@ -800,6 +866,11 @@ void PlayState::drawDraft(sf::RenderWindow& window) {
 }
 
 bool PlayState::tryBuildAt(TowerType type, sf::Vector2f pos) {
+    if (m_tutorial) {
+        if (m_tutBuildLocked) return false;
+        if (m_tutOnlySlot >= 0 && static_cast<int>(type) != m_tutOnlySlot) return false;
+    }
+
     if (!canPlaceAt(pos)) { showMessage("Nie mozna tu postawic", Theme::Warn); playSfx("denied", 60.f); return false; }
 
     const TowerMeta& meta = towerMeta(type);
@@ -808,7 +879,6 @@ bool PlayState::tryBuildAt(TowerType type, sf::Vector2f pos) {
     auto tower = createTower(type);
     if (!tower) { showMessage("Wieza niedostepna", Theme::Warn); playSfx("denied", 60.f); return false; }
 
-    // Omijamy stary TowerMeta (ktory nie ma wbudowanego cpuCost) wyciagajac koszt bezposrednio z wiezy
     int cpu = tower->getCpuCost();
 
     if (m_cpuUsage + cpu > m_cpuCapacity) { showMessage("Brak mocy CPU!", Theme::Danger); playSfx("denied", 60.f); return false; }
@@ -848,8 +918,6 @@ void PlayState::upgradeSelected() {
     showMessage("Ulepszono do poziomu " + std::to_string(t->getLevel()), Theme::NeonGreen);
     m_game.getAudio().play("upgrade");
 }
-
-// ---------------------------- RYSOWANIE ----------------------------
 
 void PlayState::drawThickLine(sf::RenderWindow& window, sf::Vector2f a, sf::Vector2f b,
                               float thickness, sf::Color color) {
@@ -925,7 +993,7 @@ void PlayState::drawBar(sf::RenderWindow& window, float x, float y, float w, flo
     fill.setFillColor(color);
     window.draw(fill);
 
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
     sf::Text t(label, font, 13);
     t.setFillColor(Theme::TextMain);
     sf::FloatRect tb = t.getLocalBounds();
@@ -940,7 +1008,9 @@ void PlayState::drawHud(sf::RenderWindow& window) {
     bar.setOutlineColor(sf::Color(0, 90, 120));
     window.draw(bar);
 
-    m_txtWave.setString("FALA  " + std::to_string(m_wave) + "/" + std::to_string(m_totalWaves));
+    if (m_tutorial) m_txtWave.setString("SAMOUCZEK");
+    else m_txtWave.setString("FALA  " + std::to_string(m_wave) + "/" + std::to_string(m_totalWaves));
+
     m_txtCredits.setString("KREDYTY  " + std::to_string(m_credits));
     m_txtHealth.setString("SERWER  " + std::to_string(m_serverHealth));
     m_txtScore.setString("WYNIK  " + std::to_string(m_score));
@@ -969,8 +1039,8 @@ void PlayState::drawHud(sf::RenderWindow& window) {
     else        std::snprintf(heatLbl, sizeof(heatLbl), "TEMP  %d%%", static_cast<int>(m_heat));
     drawBar(window, 1000.f, 16.f, 200.f, 22.f, heatFrac, heatCol, heatLbl);
 
-    if (m_waves && m_waves->inCooldown() && !m_draftActive) {
-        const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    if (m_waves && m_waves->inCooldown() && !m_draftActive && !m_tutorial) {
+        const sf::Font& font = m_game.getResources().getFont();
         int secs = static_cast<int>(std::ceil(m_waves->cooldownRemaining()));
         sf::Text t("NASTEPNA FALA ZA " + std::to_string(secs) + "s", font, 18);
         t.setFillColor(Theme::Warn);
@@ -996,7 +1066,7 @@ void PlayState::drawShop(sf::RenderWindow& window) {
     bar.setOutlineColor(sf::Color(0, 90, 120));
     window.draw(bar);
 
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
     auto& cfg = m_game.getConfig();
 
     for (int i = 0; i < static_cast<int>(TowerType::Count); ++i) {
@@ -1027,7 +1097,6 @@ void PlayState::drawShop(sf::RenderWindow& window) {
         window.draw(name);
 
         if (unlocked) {
-            // Uzywamy szacowanego CPU
             sf::Text info("$" + std::to_string(cost), font, 12);
             info.setFillColor(afford ? Theme::NeonGreen : Theme::Danger);
             info.setPosition(r.left + 10.f, r.top + 33.f);
@@ -1043,13 +1112,23 @@ void PlayState::drawShop(sf::RenderWindow& window) {
         key.setFillColor(Theme::TextDim);
         key.setPosition(r.left + r.width - 13.f, r.top + 3.f);
         window.draw(key);
+
+        if (m_tutorial && i == m_tutOnlySlot) {
+            float a = 120.f + 120.f * std::sin(m_uiTime * 5.f);
+            sf::RectangleShape hl({r.width + 6.f, r.height + 6.f});
+            hl.setPosition(r.left - 3.f, r.top - 3.f);
+            hl.setFillColor(sf::Color::Transparent);
+            hl.setOutlineThickness(3.f);
+            hl.setOutlineColor(sf::Color(57, 255, 136, static_cast<sf::Uint8>(a)));
+            window.draw(hl);
+        }
     }
 }
 
 void PlayState::drawTowerPanel(sf::RenderWindow& window) {
     if (!m_selectedTower) return;
     Tower* t = m_selectedTower;
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
 
     sf::RectangleShape panel({PANEL_W, PANEL_H});
     panel.setPosition(PANEL_X, PANEL_Y);
@@ -1096,7 +1175,7 @@ void PlayState::drawTowerPanel(sf::RenderWindow& window) {
 
 void PlayState::drawMessage(sf::RenderWindow& window) {
     if (m_messageTimer <= 0.f) return;
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
     sf::Text t(m_message, font, 22);
     float alpha = std::min(1.f, m_messageTimer / 0.5f);
     sf::Color c = m_messageColor;
@@ -1106,6 +1185,10 @@ void PlayState::drawMessage(sf::RenderWindow& window) {
     sf::FloatRect tb = t.getLocalBounds();
     t.setPosition(640.f - tb.width / 2.f, 90.f);
     window.draw(t);
+}
+
+void PlayState::drawTutorialHints(sf::RenderWindow& window) {
+    (void)window;
 }
 
 void PlayState::draw(sf::RenderWindow& window) {
@@ -1122,6 +1205,7 @@ void PlayState::draw(sf::RenderWindow& window) {
     if (m_server) m_server->draw(window);
 
     drawBuildPreview(window);
+    drawTutorialHints(window);
 
     drawHud(window);
     drawShop(window);
@@ -1131,6 +1215,7 @@ void PlayState::draw(sf::RenderWindow& window) {
     drawMessage(window);
     if (m_paused) drawPauseOverlay(window);
     if (m_draftActive) drawDraft(window);
+    if (m_tutorial && m_tutorialDirector) m_tutorialDirector->draw(window);
 }
 
 void PlayState::drawControls(sf::RenderWindow& window) {
@@ -1141,7 +1226,7 @@ void PlayState::drawControls(sf::RenderWindow& window) {
 
 void PlayState::drawAbilities(sf::RenderWindow& window) {
     if (!m_abilitiesEnabled) return;
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
 
     sf::Text hdr("MOCE", font, 13);
     hdr.setFillColor(Theme::TextDim);
@@ -1200,6 +1285,7 @@ void PlayState::drawAbilities(sf::RenderWindow& window) {
 
 void PlayState::drawBuildPreview(sf::RenderWindow& window) {
     if (m_buildSelection < 0 || !m_preview) return;
+    if (m_tutorial && m_tutBuildLocked) return;
     sf::Vector2f p = m_mouse;
     if (p.y >= SHOP_Y) return;
     bool ok = canPlaceAt(p);
@@ -1233,7 +1319,7 @@ void PlayState::drawPauseOverlay(sf::RenderWindow& window) {
     dim.setFillColor(sf::Color(0, 0, 0, 150));
     window.draw(dim);
 
-    const sf::Font& font = m_game.getResources().getFont("assets/fonts/title.ttf");
+    const sf::Font& font = m_game.getResources().getFont();
     sf::Text t("PAUZA", font, 72);
     t.setStyle(sf::Text::Bold);
     t.setFillColor(Theme::NeonCyan);
@@ -1242,7 +1328,7 @@ void PlayState::drawPauseOverlay(sf::RenderWindow& window) {
     t.setPosition(640.f, 330.f);
     window.draw(t);
 
-    const sf::Font& body = m_game.getResources().getFont("assets/fonts/body.ttf");
+    const sf::Font& body = m_game.getResources().getFont();
     sf::Text hint("SPACE - wznow", body, 24);
     hint.setFillColor(Theme::TextDim);
     sf::FloatRect hb = hint.getLocalBounds();
