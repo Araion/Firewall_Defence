@@ -57,7 +57,7 @@ PlayState::PlayState(Game& game, bool tutorial) : GameState(game), m_tutorial(tu
     m_breachChance = cfg.getFloat("breachEventChance", 0.25f);
     m_breachWormOnly = cfg.getBool("breachWormOnly", false);
 
-    float diff = cfg.getFloat("difficultyMultiplier", 1.f);
+    float diff = cfg.getFloat("difficultyLevel", 1.f);
     m_difficultyLevel = (diff <= 0.9f) ? 0 : (diff >= 1.15f ? 2 : 1);
     m_mapSeed = static_cast<unsigned>(Rng::range(1, 2000000000));
 

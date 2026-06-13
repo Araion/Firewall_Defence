@@ -2,7 +2,7 @@
 #include "util/Theme.h"
 #include <algorithm>
 
-void Button::setup(const sf::Font& font, const std::string& label,
+void Button::setup(const sf::Font& font, const sf::String& label,
                    sf::Vector2f pos, sf::Vector2f size, unsigned charSize) {
     m_font = &font;
     m_pos = pos;
@@ -23,7 +23,7 @@ void Button::setColors(sf::Color base, sf::Color hover, sf::Color text, sf::Colo
     m_text.setFillColor(m_textColor);
 }
 
-void Button::setLabel(const std::string& label) {
+void Button::setLabel(const sf::String& label) {
     m_text.setString(label);
     relayout();
 }

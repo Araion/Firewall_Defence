@@ -4,6 +4,7 @@
 #include "core/Game.h"
 #include "managers/AudioManager.h"
 #include "managers/ScoreManager.h"
+#include "util/TextUtils.h"
 #include "util/Theme.h"
 
 GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
@@ -21,8 +22,8 @@ GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
     m_title.setPosition(640.f, 150.f);
 
     m_info.setFont(font);
-    m_info.setString("Wynik: " + std::to_string(score) +
-                     "     Trudnosc: " + difficultyName(difficulty));
+    m_info.setString(utf8("Wynik: " + std::to_string(score) +
+                     "     Trudność: " + difficultyName(difficulty)));
     m_info.setCharacterSize(26);
     m_info.setFillColor(Theme::TextMain);
     sf::FloatRect ib = m_info.getLocalBounds();
@@ -50,7 +51,7 @@ GameOverState::GameOverState(Game& game, int score, int wave, int difficulty)
     m_btnSave.setColors(Theme::PanelSolid, Theme::NeonGreen, Theme::TextMain, Theme::NeonGreen);
     m_btnReplay.setup(font, "ZAGRAJ PONOWNIE", {440.f, 462.f}, {400.f, 48.f}, 22);
     m_btnReplay.setColors(Theme::PanelSolid, Theme::NeonCyan, Theme::TextMain, Theme::NeonCyan);
-    m_btnMenu.setup(font, "MENU GLOWNE", {440.f, 524.f}, {400.f, 48.f}, 22);
+    m_btnMenu.setup(font, utf8("MENU GŁÓWNE"), {440.f, 524.f}, {400.f, 48.f}, 22);
     m_btnMenu.setColors(Theme::PanelSolid, Theme::Warn, Theme::TextMain, Theme::Warn);
 
     m_game.getAudio().play("game_over");

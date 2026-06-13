@@ -24,7 +24,7 @@ WaveManager::WaveManager(PlayState& state, ConfigManager& cfg,
     m_hpGrowth = cfg.getFloat("waveHealthGrowth", 0.08f);
     m_speedGrowth = cfg.getFloat("waveSpeedGrowth", 0.02f);
     m_rewardGrowth = cfg.getFloat("waveRewardGrowth", 0.03f);
-    m_difficulty = cfg.getFloat("difficultyMultiplier", 1.f);
+    m_difficulty = cfg.getInt("difficultyLevel", 1);
     m_rewardPercent = cfg.getFloat("enemyRewardPercent", 100.f) / 100.f;
     m_encryptChance = cfg.getFloat("encryptedEnemyChance", 0.15f);
 }
@@ -51,7 +51,7 @@ void WaveManager::startWave(int wave) {
     m_queueIdx = 0;
 
     // Skalowanie statystyk z numerem fali.
-    m_hpScale = std::pow(1.f + m_hpGrowth, static_cast<float>(wave - 1)) * m_difficulty;
+    m_hpScale = std::pow(1.f + m_hpGrowth, static_cast<float>(wave - 1)) * (m_difficulty == 0 ? 0.8 : (m_difficulty == 2 ? 1.2 : 1));
     m_speedScale = std::pow(1.f + m_speedGrowth, static_cast<float>(wave - 1));
     m_rewardScale = std::pow(1.f + m_rewardGrowth, static_cast<float>(wave - 1)) * m_rewardPercent;
 

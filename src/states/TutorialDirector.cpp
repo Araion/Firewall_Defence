@@ -83,8 +83,8 @@ void TutorialDirector::buildSteps() {
 
     info("WITAJ W FIREWALL DEFENSE",
          "Bronisz rdzenia serwera przed malware.\n"
-         "Przeprowadz\xC4\x99 Ci\xC4\x99 krok po kroku. Czytasz opis w tym oknie,\n"
-         "klikasz DALEJ, a potem wykonujesz pokazan\xC4\x85 akcj\xC4\x99.\n"
+         "Przeprowadzę Cię krok po kroku. Czytasz opis w tym oknie,\n"
+         "klikasz DALEJ, a potem wykonujesz pokazaną akcję.\n"
          "Kliknij DALEJ.");
 
     // Schemat: panel z opisem WIEZY -> DALEJ -> postaw gdziekolwiek -> przerwa ->
@@ -92,90 +92,89 @@ void TutorialDirector::buildSteps() {
     // --- 1) ANTIVIRUS ---
     build(0, 0, "ANTIVIRUS (slot 1)",
           "ANTIVIRUS strzela pojedynczo w jeden cel. Po DALEJ wybierz go\n"
-          "(slot 1) i postaw w DOWOLNYM miejscu przy scie\xC5\xBC""ce.");
-    combat(0, 1, "WR\xC3\x93G: VIRUS",
-           "VIRUS - s\xC5\x82""aby i szybki, bez zdolno\xC5\x9B""ci.");
+          "(slot 1) i postaw w DOWOLNYM miejscu przy ścieżce.");
+    combat(0, 1, "WRÓG: VIRUS",
+           "VIRUS - słaby i szybki, bez zdolności.");
 
     // --- 2) FIREWALL ---
     build(1, 1, "FIREWALL (slot 2)",
-          "FIREWALL nie strzela - roztacza pole, kt\xC3\xB3re SPOWALNIA wrog\xC3\xB3w\n"
-          "w zasi\xC4\x99gu. Postaw go przy scie\xC5\xBC""ce.");
-    combat(2, 2, "WR\xC3\x93G: WORM",
-           "WORM jest szybki i po \xC5\x9Bmierci DZIELI si\xC4\x99 na 2 mini-wormy,\n"
-           "kt\xC3\xB3re dziel\xC4\x85 si\xC4\x99 na kolejne 2 mniejsze.");
+          "FIREWALL nie strzela - roztacza pole, które SPOWALNIA wrogów\n"
+          "w zasięgu. Postaw go przy ścieżce.");
+    combat(2, 2, "WRÓG: WORM",
+           "WORM jest szybki i po śmierci DZIELI się na 2 mini-wormy,\n"
+           "które dzielą się na kolejne 2 mniejsze.");
 
     // --- 3) LASER ---
     build(2, 2, "LASER (slot 3)",
-          "LASER to ci\xC4\x85g\xC5\x82y promien o du\xC5\xBC""ej szybkostrzelno\xC5\x9B""ci - mocny\n"
-          "na pojedyncze, wytrzyma\xC5\x82""e cele. Postaw go.");
-    combat(1, 1, "WR\xC3\x93G: TROJAN",
-           "TROJAN jest wolny i wytrzyma\xC5\x82y.\n"
-           "Po \xC5\x9Bmierci uwalnia 2 wirusy (Payload).");
+          "LASER to ciągły promień o dużej szybkostrzelności - mocny\n"
+          "na pojedyncze, wytrzymałe cele. Postaw go.");
+    combat(1, 1, "WRÓG: TROJAN",
+           "TROJAN jest wolny i wytrzymały.\n"
+           "Po śmierci uwalnia 2 wirusy (Payload).");
 
     // --- 4) DATA CLEANER ---
     build(3, 3, "DATA CLEANER (slot 4)",
-          "DATA CLEANER nie strzela i nie zadaje obra\xC5\xBC""en -\n"
-          "SKANUJE i wykrywa zaszyfrowanych wrogow.\n"
-          "Postaw go blisko \xC5\x9B""ciezki, by obejmowa\xC5\x82 j\xC4\x85 skanem.");
-    combatSeq({{0, false}, {0, true}}, "WR\xC3\x93G: ZASZYFROWANY",
-              "Pojawi si\xC4\x99 zwykly VIRUS, a za nim ZASZYFROWANY. Zaszyfrowany\n"
+          "DATA CLEANER nie strzela i nie zadaje obrażeń -\n"
+          "SKANUJE i wykrywa zaszyfrowanych wrogów.\n"
+          "Postaw go blisko ścieżki, by obejmował ją skanem.");
+    combatSeq({{0, false}, {0, true}}, "WRÓG: ZASZYFROWANY",
+              "Pojawi się zwykły VIRUS, a za nim ZASZYFROWANY. Zaszyfrowany\n"
               "jest NIEWIDOCZNY dla Antivirus/Laser - dopiero gdy Data Cleaner\n"
-              "go wykryje, wie\xC5\xBC""e moga go namierzy\xC4\x87 i zniszczy\xC4\x87.");
+              "go wykryje, wieże mogą go namierzyć i zniszczyć.");
 
     // --- 5) CORRUPTION ---
     build(5, 4, "CORRUPTION (slot 6)",
-          "CORRUPTION zadaje obra\xC5\xBC""enia w CZASIE (DoT).\n"
-          "S\xC5\x82""abe trafienie, ale rani przez kilka sekund. Postaw go.");
-    combat(1, 1, "DZIALANIE DoT",
-           "Trojan jest wytrzyma\xC5\x82y - zobacz, jak jego\n"
+          "CORRUPTION zadaje obrażenia w CZASIE (DoT).\n"
+          "Słabe trafienie, ale rani przez kilka sekund. Postaw go.");
+    combat(1, 1, "DZIAŁANIE DoT",
+           "Trojan jest wytrzymały - zobacz, jak jego\n"
            "HP maleje po trafieniu Corruption.");
 
     // --- 6) OVERCLOCK ---
     info("CPU i TEMPERATURA",
-         "Ka\xC5\xBC""da wie\xC5\xBC""a zu\xC5\xBCywa CPU (pasek u g\xC3\xB3ry). Mocne przeci\xC4\x85\xC5\xBC""enie\n"
-         "podnosi TEMP - przy 100% nastepuje PRZEGRZANIE i przegrana.");
+         "Każda wieża zużywa CPU (pasek u góry). Mocne przeciążenie\n"
+         "podnosi TEMP - przy 100% następuje PRZEGRZANIE i przegrana.");
     build(4, 5, "OVERCLOCK (slot 5)",
-          "OVERCLOCK daje s\xC4\x85siednim wie\xC5\xBCom +szybkostrzelno\xC5\x9B""ci,\n"
-          "ale najmocniej grzeje serwer. Postaw go OBOK innych wie\xC5\xBC.");
+          "OVERCLOCK daje sąsiednim wieżom +szybkostrzelności,\n"
+          "ale najmocniej grzeje serwer. Postaw go OBOK innych wież.");
     combat(0, 2, "WZMOCNIENIE",
-           "Zwr\xC3\xB3\xC4\x87 uwag\xC4\x99 na przyspieszenie OVERCLOCK'u");
+           "Zwróć uwagę na przyspieszenie OVERCLOCK'u.");
 
     // --- 7) EMP: wybuch obszarowy ---
     build(6, 6, "EMP (slot 7)",
-          "EMP wystrzeliwuje impuls, kt\xC3\xB3ry WYBUCHA w miejscu trafienia i\n"
-          "razi WSZYSTKICH wrog\xC3\xB3w w pobli\xC5\xBCu. Idealny na grupy. Postaw go.");
-    combatSeq({{0, false}, {0, false}, {0, false}, {2, false}}, "WR\xC3\x93G: GRUPA",
-              "EMP uderza w kilku wrogow naraz jednym wybuchem obszarowym -\n"
-              "najlepszy na zbite grupy przeciwnikow.");
+          "EMP wystrzeliwuje impuls, który WYBUCHA w miejscu trafienia i\n"
+          "razi WSZYSTKICH wrogów w pobliżu. Idealny na grupy. Postaw go.");
+    combatSeq({{0, false}, {0, false}, {0, false}, {2, false}}, "WRÓG: GRUPA",
+              "EMP uderza w kilku wrogów naraz jednym wybuchem obszarowym -\n"
+              "najlepszy na zbite grupy przeciwników.");
 
     // --- Wrogowie specjalni ---
-    combat(3, 2, "WR\xC3\x93G: GLITCH DRONE",
-           "GLITCH DRONE jest bardzo szybki i co chwile WY\xC5\x81\xC4\x84""CZA wie\xC5\xBC""e\n"
-           "(atak DDoS) - trafiona wie\xC5\xBC""a na chwile przestaje strzela\xC4\x87.");
-
+    combat(3, 2, "WRÓG: GLITCH DRONE",
+           "GLITCH DRONE jest bardzo szybki i co chwilę WYŁĄCZA wieże\n"
+           "(atak DDoS) - trafiona wieża na chwilę przestaje strzelać.");
     combatSeq({{0, false}, {0, false}, {2, false}, {5, false}, {0, false}, {0, false}},
-              "WR\xC3\x93G: PROXY",
-              "PROXY (przeka\xC5\xBAnik botnetu) co chwile PRZERZUCA\n"
-              "do przodu s\xC4\x85siednich wrog\xC3\xB3w");
+              "WRÓG: PROXY",
+              "PROXY (przekaźnik botnetu) co chwilę PRZERZUCA\n"
+              "do przodu sąsiednich wrogów.");
 
     // --- PORT BREACH ---
     info("PORT BREACH",
-         "Czasem otwiera sie CZERWONY tunel - nowy wektor ataku.\n"
-         "Wrogowie mog\xC4\x85 nim omin\xC4\x85\xC4\x87 cz\xC4\x99\xC5\x9B\xC4\x87 obrony. B\xC4\x85""d\xC5\xBA czujny!");
+         "Czasem otwiera się CZERWONY tunel - nowy wektor ataku.\n"
+         "Wrogowie mogą nim ominąć część obrony. Bądź czujny!");
     combat(2, 3, "ATAK PRZEZ TUNEL",
-           "Wrogowie wchodz\xC4\x85 nowym, czerwonym tunelem", false, true);
+           "Wrogowie wchodzą nowym, czerwonym tunelem.", false, true);
 
     // --- BOSS ---
     combat(4, 1, "BOSS MALWARE",
-           "BOSS ma PANCERZ (mniej obraze\xC5\x84), PRZYZYWA wrog\xC3\xB3w, a poni\xC5\xBC""ej\n"
-           "50% HP jest ODPORNY na spowolnienie. Mo\xC5\xBC""esz teraz stawia\xC4\x87\n"
-           "wie\xC5\xBC""e GDZIEKOLWIEK - pokonaj go!");
+           "BOSS ma PANCERZ (mniej obrażeń), PRZYZYWA wrogów, a poniżej\n"
+           "50% HP jest ODPORNY na spowolnienie. Możesz teraz stawiać\n"
+           "wieże GDZIEKOLWIEK - pokonaj go!");
     m_steps.back().freeBuild = true; // w walce z bossem gracz buduje swobodnie
 
-    info("SAMOUCZEK UKO\xC5\x83""CZONY!",
-         "Brawo! W normalnej grze masz te\xC5\xBC aktywne MOCE (Coolant/Surge),\n"
-         "co kilka fal wybierasz ulepszenia (System Update), a trudno\xC5\x9B\xC4\x87\n"
-         "ro\xC5\x9Bnie z fala. Kliknij DALEJ, aby wrocic do menu. Powodzenia!");
+    info("SAMOUCZEK UKOŃCZONY!",
+         "Brawo! W normalnej grze masz też aktywne MOCE (Coolant/Surge),\n"
+         "co kilka fal wybierasz ulepszenia (System Update), a trudność\n"
+         "rośnie z falą. Kliknij DALEJ, aby wrócić do menu. Powodzenia!");
 }
 
 void TutorialDirector::enterStep(int i) {

@@ -1,4 +1,5 @@
 #pragma once
+#include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,8 @@ struct ScoreEntry {
 };
 
 // Zwraca nazwe poziomu trudnosci do wyswietlenia
-inline const char* difficultyName(int d) {
-    return d == 0 ? "Latwy" : (d == 2 ? "Trudny" : "Normalny");
+inline const sf::String difficultyName(int d) {
+    return d == 0 ? "Łatwy" : (d == 2 ? "Trudny" : "Normalny");
 }
 
 // =============================================================

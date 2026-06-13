@@ -4,6 +4,7 @@
 #include "states/HighScoreState.h"
 #include "core/Game.h"
 #include "managers/AudioManager.h"
+#include "util/TextUtils.h"
 #include "util/Theme.h"
 #include "util/ArtScale.h"
 #include <cmath>
@@ -31,8 +32,7 @@ MainMenuState::MainMenuState(Game& game) : GameState(game) {
 
     // Przygotowuje podtytul menu
     m_subtitle.setFont(res.getFont());
-    std::string subtitle = "Obroń serwer przed złośliwym oprogramowaniem";
-    m_subtitle.setString(sf::String::fromUtf8(subtitle.begin(), subtitle.end()));
+    m_subtitle.setString(utf8("Obroń serwer przed złośliwym oprogramowaniem"));
     m_subtitle.setCharacterSize(20);
     m_subtitle.setFillColor(Theme::NeonGreen);
 
@@ -44,6 +44,9 @@ MainMenuState::MainMenuState(Game& game) : GameState(game) {
     buildButtons();
 
     // Uruchamia muzyke menu
+    auto& cfg = m_game.getConfig();
+    m_game.getAudio().setSfxVolume(cfg.getInt("sfxVolume", 100));
+    m_game.getAudio().setMusicVolume(cfg.getInt("musicVolume", 15));
     m_game.getAudio().playMusic("music_menu");
 }
 
@@ -51,7 +54,7 @@ void MainMenuState::buildButtons() {
     auto& res = m_game.getResources();
     const sf::Font& font = res.getFont();
 
-    const char* labels[BtnCount] = { "NOWA GRA", "SAMOUCZEK", "WCZYTAJ GRE", "TABLICA WYNIKOW", "USTAWIENIA", "WYJSCIE" };
+    const std::string labels[BtnCount] = { "NOWA GRA", "SAMOUCZEK", "WCZYTAJ GRĘ", "TABLICA WYNIKÓW", "USTAWIENIA", "WYJŚCIE" };
 
     const float w = 340.f, h = 50.f, gap = 13.f;
     const float startY = 272.f;
@@ -60,7 +63,7 @@ void MainMenuState::buildButtons() {
     m_buttons.clear();
     m_buttons.resize(BtnCount);
     for (int i = 0; i < BtnCount; ++i) {
-        m_buttons[i].setup(font, labels[i], {x, startY + i * (h + gap)}, {w, h}, 24);
+        m_buttons[i].setup(font, utf8(labels[i]), {x, startY + i * (h + gap)}, {w, h}, 24);
         if (i == BtnExit)
             m_buttons[i].setColors(Theme::PanelSolid, Theme::Danger, Theme::TextMain, Theme::Danger);
         else

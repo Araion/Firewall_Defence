@@ -1,10 +1,53 @@
 # Firewall Defense - konfiguracja gry
 
-# Zycie rdzenia serwera
-serverHealth = 30
+# --- Ekonomia i serwer ---
+startingCredits = 300
+serverHealth = 20
+totalWaves = 20
+timeBetweenWaves = 8.0*
+difficultyLevel = 1
 
-# Glosnosc efektow dzwiekowych 0-100
+# --- Modyfikatory procentowe (ekran ustawien) ---
+towerCostPercent = 100
+enemyRewardPercent = 100
+
+# --- Audio (glosnosc 0-100, ekran ustawien) ---
 sfxVolume = 100
+musicVolume = 15
 
-# Glosnosc muzyki 0-100
-musicVolume = 2
+# --- Wzrost trudnosci z kazda fala ---
+waveHealthGrowth = 0.08
+waveSpeedGrowth = 0.02
+waveRewardGrowth = 0.03
+
+# --- Koszty wiez ---
+antivirusTowerCost = 100
+firewallTowerCost = 120
+laserTowerCost = 150
+dataCleanerTowerCost = 130
+overclockTowerCost = 180
+corruptionTowerCost = 140
+empTowerCost = 200
+
+# --- Punkty za wrogow ---
+virusPoints = 10
+trojanPoints = 25
+wormPoints = 15
+glitchDronePoints = 30
+bossPoints = 200
+
+# --- Fale ---
+maxActiveEnemies = 40
+bossEveryNWaves = 5
+
+# --- CPU ---
+cpuCapacity = 140
+heatSoftThreshold = 0.85
+overclockHeatPerSecond = 8.0
+
+# --- Eventy ---
+abilityCooldown = 40
+breachEventChance = 0.25
+breachWormOnly = 0
+systemUpgradeInterval = 5
+encryptedEnemyChance = 0.15

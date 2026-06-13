@@ -12,11 +12,11 @@ public:
 
     // Ustawia tekst, czcionke, pozycje i rozmiar przycisku
     // Czcionka musi istniec tak dlugo jak przycisk
-    void setup(const sf::Font& font, const std::string& label,
+    void setup(const sf::Font& font, const sf::String& label,
                sf::Vector2f pos, sf::Vector2f size, unsigned charSize = 24);
 
     void setColors(sf::Color base, sf::Color hover, sf::Color text, sf::Color outline);
-    void setLabel(const std::string& label);
+    void setLabel(const sf::String& label);
     void setPosition(sf::Vector2f pos);
     void setEnabled(bool enabled) { m_enabled = enabled; }
     bool isEnabled() const { return m_enabled; }

@@ -4,12 +4,13 @@
 #include "managers/ScoreManager.h"
 #include "managers/AudioManager.h"
 #include "util/Theme.h"
+#include "util/TextUtils.h"
 #include <cstdio>
 
 HighScoreState::HighScoreState(Game& game) : GameState(game) {
     const sf::Font& font = m_game.getResources().getFont();
     m_title.setFont(font);
-    m_title.setString("TABLICA WYNIKOW");
+    m_title.setString(utf8("TABLICA WYNIKÓW"));
     m_title.setCharacterSize(48);
     m_title.setStyle(sf::Text::Bold);
     m_title.setFillColor(Theme::NeonCyan);
@@ -17,7 +18,7 @@ HighScoreState::HighScoreState(Game& game) : GameState(game) {
     m_title.setOrigin(tb.left + tb.width / 2.f, tb.top + tb.height / 2.f);
     m_title.setPosition(640.f, 80.f);
 
-    m_btnBack.setup(font, "POWROT (ESC)", {540.f, 640.f}, {200.f, 48.f}, 20);
+    m_btnBack.setup(font, utf8("POWRÓT"), {540.f, 640.f}, {200.f, 48.f}, 20);
     m_btnBack.setColors(Theme::PanelSolid, Theme::NeonCyan, Theme::TextMain, Theme::NeonCyan);
 
     // Odswiezamy liste z pliku (na wypadek nowych wynikow)
@@ -51,8 +52,8 @@ void HighScoreState::draw(sf::RenderWindow& window) {
     const sf::Font& font = m_game.getResources().getFont();
     const auto& entries = m_game.getScores().entries();
 
-    auto drawRow = [&](float y, const std::string& a, const std::string& b, const std::string& c,
-                       const std::string& d, const std::string& e, sf::Color col, unsigned size) {
+    auto drawRow = [&](float y, const sf::String& a, const sf::String& b, const sf::String& c,
+                       const sf::String& d, const sf::String& e, sf::Color col, unsigned size) {
         sf::Text t1(a, font, size); t1.setFillColor(col); t1.setPosition(250.f, y); window.draw(t1);
         sf::Text t2(b, font, size); t2.setFillColor(col); t2.setPosition(560.f, y); window.draw(t2);
         sf::Text t3(c, font, size); t3.setFillColor(col); t3.setPosition(680.f, y); window.draw(t3);
@@ -60,10 +61,10 @@ void HighScoreState::draw(sf::RenderWindow& window) {
         sf::Text t5(e, font, size); t5.setFillColor(col); t5.setPosition(950.f, y); window.draw(t5);
     };
 
-    drawRow(160.f, "#  NICK", "WYNIK", "FALA", "TRUDNOSC", "DATA", Theme::TextDim, 20);
+    drawRow(160.f, "#  NICK", "WYNIK", "FALA", utf8("TRUDNOŚĆ"), "DATA", Theme::TextDim, 20);
 
     if (entries.empty()) {
-        sf::Text none("Brak zapisanych wynikow.", font, 22);
+        sf::Text none(utf8("Brak zapisanych wyników."), font, 22);
         none.setFillColor(Theme::TextDim);
         none.setPosition(440.f, 220.f);
         window.draw(none);
@@ -73,8 +74,8 @@ void HighScoreState::draw(sf::RenderWindow& window) {
         for (const auto& e : entries) {
             sf::Color col = rank == 1 ? Theme::NeonGreen : Theme::TextMain;
             char idx[8]; std::snprintf(idx, sizeof(idx), "%d. ", rank);
-            drawRow(y, std::string(idx) + e.name, std::to_string(e.score), std::to_string(e.wave),
-                    difficultyName(e.difficulty), e.date, col, 22);
+            drawRow(y, utf8(sf::String(idx) + e.name), std::to_string(e.score), std::to_string(e.wave),
+                    utf8(difficultyName(e.difficulty)), e.date, col, 22);
             y += 38.f;
             ++rank;
         }
